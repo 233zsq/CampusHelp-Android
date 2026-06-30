@@ -2,7 +2,18 @@
     <!-- Dark theme. -->
     <style name="Base.Theme.CampusHelp" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowBackground">@color/black</item>
+        <item name="android:navigationBarColor">@color/black</item>
+        <item name="bottomNavigationStyle">@style/Widget.CampusHelp.BottomNavigationView</item>
     </style>
 
     <style name="Theme.CampusHelp" parent="Base.Theme.CampusHelp" />
+
+    <!-- BottomNavigationView 样式 (夜间模式) -->
+    <style name="Widget.CampusHelp.BottomNavigationView" parent="Widget.Material3.BottomNavigationView">
+        <item name="android:background">@color/black</item>
+        <item name="android:elevation">8dp</item>
+        <item name="itemIconTint">@color/bottom_nav_color</item>
+        <item name="itemTextColor">@color/bottom_nav_color</item>
+        <item name="labelVisibilityMode">labeled</item>
+    </style>
 </resources>

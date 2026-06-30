@@ -8,7 +8,18 @@
         <item name="colorOnSecondary">@color/white</item>
         <item name="android:windowBackground">@color/bg_page</item>
         <item name="android:statusBarColor">@color/brand_primary_dark</item>
+        <item name="android:navigationBarColor">@color/bg_card</item>
+        <item name="bottomNavigationStyle">@style/Widget.CampusHelp.BottomNavigationView</item>
     </style>
 
     <style name="Theme.CampusHelp" parent="Base.Theme.CampusHelp" />
+
+    <!-- BottomNavigationView 样式 -->
+    <style name="Widget.CampusHelp.BottomNavigationView" parent="Widget.Material3.BottomNavigationView">
+        <item name="android:background">@color/bg_card</item>
+        <item name="android:elevation">8dp</item>
+        <item name="itemIconTint">@color/bottom_nav_color</item>
+        <item name="itemTextColor">@color/bottom_nav_color</item>
+        <item name="labelVisibilityMode">labeled</item>
+    </style>
 </resources>
