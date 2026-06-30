@@ -7,6 +7,7 @@ pluginManagement {
                 includeGroupByRegex("androidx.*")
             }
         }
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
         mavenCentral()
         gradlePluginPortal()
     }
@@ -18,9 +19,13 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
         mavenCentral()
+        // JitPack：可选图表(MPAndroidChart)/适配器(BRVAH)等库预留
+        maven { url = uri("https://jitpack.io") }
     }
 }
 
-rootProject.name = "My Application"
+rootProject.name = "CampusHelp"
 include(":app")

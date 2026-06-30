@@ -10,3 +10,35 @@
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
 #}
+
+# ===== 高德地图 / 定位 / 搜索 SDK =====
+-keep class com.amap.api.maps.** { *; }
+-keep class com.amap.api.maps2d.** { *; }
+-keep class com.amap.api.maps.model.** { *; }
+-keep class com.amap.api.location.** { *; }
+-keep class com.amap.api.services.** { *; }
+-keep class com.amap.api.mapcore.** { *; }
+-keep class com.amap.api.fence.** { *; }
+-keep class com.amap.api.trace.** { *; }
+-keep class com.autonavi.** { *; }
+-keep class com.loc.** { *; }
+
+# ===== Glide =====
+-keep public class * implements com.bumptech.glide.module.GlideModule
+-keep class com.bumptech.glide.** { *; }
+-keep class com.bumptech.glide.load.data.ParcelFileDescriptorRewinder$InternalRewinder { *** rewind(); }
+
+# ===== Retrofit / OkHttp / Gson =====
+-keepattributes Signature, InnerClasses, EnclosingMethod
+-keepattributes RuntimeVisibleAnnotations, RuntimeVisibleParameterAnnotations
+-keepclassmembers,allowshrinking,allowobfuscation interface * {
+    @retrofit2.http.* <methods>;
+}
+-dontwarn okhttp3.**
+-dontwarn okio.**
+-dontwarn retrofit2.**
+# Gson 序列化的数据模型
+-keep class com.campus.help.data.model.** { *; }
+
+# ===== Room =====
+-keep class * extends androidx.room.RoomDatabase { <init>(); }
