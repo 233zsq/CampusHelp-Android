@@ -39,4 +39,9 @@ public final class PermissionUtils {
         return hasPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION)
                 || hasPermission(ctx, Manifest.permission.ACCESS_COARSE_LOCATION);
     }
+
+    /** 是否有相机权限（头像拍照用）。 */
+    public static boolean hasCamera(Context ctx) {
+        return hasPermission(ctx, Manifest.permission.CAMERA);
+    }
 }

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="@dimen/page_margin"
+    android:layout_marginStart="@dimen/page_margin_small"
+    android:layout_marginEnd="@dimen/page_margin_small"
+    android:layout_marginTop="@dimen/page_margin_small"
+    android:background="@color/bg_card">
+
+    <!-- 变动值：加分绿 / 减分红 -->
+    <TextView
+        android:id="@+id/tv_delta"
+        android:layout_width="80dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:textSize="@dimen/text_title"
+        android:textStyle="bold"
+        tools:text="+10" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_marginStart="@dimen/page_margin">
+
+        <TextView
+            android:id="@+id/tv_reason"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_primary"
+            android:textSize="@dimen/text_body"
+            android:maxLines="2"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/tv_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/text_secondary"
+            android:textSize="@dimen/text_caption" />
+    </LinearLayout>
+
+</LinearLayout>

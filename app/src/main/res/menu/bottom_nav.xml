@@ -9,6 +9,10 @@
         android:icon="@drawable/ic_publish"
         android:title="@string/tab_publish" />
     <item
+        android:id="@+id/nav_map"
+        android:icon="@drawable/ic_map"
+        android:title="@string/tab_map" />
+    <item
         android:id="@+id/nav_message"
         android:icon="@drawable/ic_message"
         android:title="@string/tab_message" />

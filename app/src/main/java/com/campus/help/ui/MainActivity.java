@@ -21,7 +21,7 @@ import com.google.android.material.badge.BadgeDrawable;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 /**
- * 主界面：底部导航壳，承载 4 个 Fragment Tab（首页 / 发布 / 消息 / 我的）。
+ * 主界面：底部导航壳，承载 5 个 Fragment Tab（首页 / 发布 / 地图 / 消息 / 我的）。
  * 未登录时跳转 {@link LoginActivity}。消息 Tab 显示未读角标。
  */
 public class MainActivity extends BaseActivity<ActivityMainBinding> {
@@ -57,6 +57,8 @@ public class MainActivity extends BaseActivity<ActivityMainBinding> {
                 target = new HomeFragment();
             } else if (id == R.id.nav_publish) {
                 target = new PublishFragment();
+            } else if (id == R.id.nav_map) {
+                target = new MapFragment();
             } else if (id == R.id.nav_message) {
                 target = new MessageFragment();
             } else if (id == R.id.nav_mine) {

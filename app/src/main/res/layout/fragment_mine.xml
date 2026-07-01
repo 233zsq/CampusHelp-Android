@@ -1,29 +1,194 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg_page"
-    android:gravity="center"
-    android:orientation="vertical">
+    android:fillViewport="true">
 
-    <com.campus.help.core.widget.CreditGaugeView
-        android:id="@+id/credit_gauge"
-        android:layout_width="220dp"
-        android:layout_height="wrap_content" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/page_margin"
-        android:text="个人中心（成员 D 填充）"
-        android:textColor="@color/text_secondary"
-        android:textSize="@dimen/text_body" />
-
-    <Button
-        android:id="@+id/btn_logout"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:text="退出登录" />
+        android:orientation="vertical"
+        android:paddingBottom="32dp">
 
-</LinearLayout>
+        <!-- ===== 头部：头像 + 昵称 + 学号 ===== -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:paddingTop="32dp"
+            android:paddingBottom="20dp"
+            android:background="@color/bg_card">
+
+            <ImageView
+                android:id="@+id/avatar"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:background="@drawable/bg_avatar_placeholder"
+                android:contentDescription="@string/app_name"
+                android:scaleType="centerCrop" />
+
+            <TextView
+                android:id="@+id/tv_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="—"
+                android:textColor="@color/text_primary"
+                android:textSize="@dimen/text_title"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_student_id"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="—"
+                android:textColor="@color/text_secondary"
+                android:textSize="@dimen/text_body" />
+        </LinearLayout>
+
+        <!-- ===== 信用分仪表盘 ===== -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="@dimen/page_margin"
+            android:layout_marginTop="@dimen/page_margin_small"
+            android:layout_marginStart="@dimen/page_margin"
+            android:layout_marginEnd="@dimen/page_margin"
+            android:background="@color/bg_card">
+
+            <com.campus.help.core.widget.CreditGaugeView
+                android:id="@+id/credit_gauge"
+                android:layout_width="220dp"
+                android:layout_height="wrap_content" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="信用分"
+                android:textColor="@color/text_secondary"
+                android:textSize="@dimen/text_caption" />
+        </LinearLayout>
+
+        <!-- ===== 功能入口 ===== -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/page_margin_small"
+            android:layout_marginStart="@dimen/page_margin"
+            android:layout_marginEnd="@dimen/page_margin"
+            android:orientation="vertical"
+            android:background="@color/bg_card">
+
+            <LinearLayout
+                android:id="@+id/entry_published"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="@dimen/page_margin"
+                android:paddingEnd="@dimen/page_margin"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?android:attr/selectableItemBackground">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="我发布的"
+                    android:textColor="@color/text_primary"
+                    android:textSize="@dimen/text_body" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=">"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="@dimen/text_body" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0.5dp"
+                android:background="@color/divider" />
+
+            <LinearLayout
+                android:id="@+id/entry_accepted"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="@dimen/page_margin"
+                android:paddingEnd="@dimen/page_margin"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?android:attr/selectableItemBackground">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="我接的"
+                    android:textColor="@color/text_primary"
+                    android:textSize="@dimen/text_body" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=">"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="@dimen/text_body" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0.5dp"
+                android:background="@color/divider" />
+
+            <LinearLayout
+                android:id="@+id/entry_credit"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="@dimen/page_margin"
+                android:paddingEnd="@dimen/page_margin"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?android:attr/selectableItemBackground">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="信用明细"
+                    android:textColor="@color/text_primary"
+                    android:textSize="@dimen/text_body" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=">"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="@dimen/text_body" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ===== 退出登录 ===== -->
+        <Button
+            android:id="@+id/btn_logout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/page_margin"
+            android:layout_marginStart="@dimen/page_margin"
+            android:layout_marginEnd="@dimen/page_margin"
+            android:text="退出登录" />
+
+    </LinearLayout>
+</ScrollView>

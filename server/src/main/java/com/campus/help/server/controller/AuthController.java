@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 /**
- * 认证控制器：登录 / 注册。
+ * 认证控制器：登录 / 注册 / 登出。
  * 替代 Android 端 LoginActivity 中的本地 Room 校验逻辑。
  */
 @Slf4j

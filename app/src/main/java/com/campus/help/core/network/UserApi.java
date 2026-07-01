@@ -46,4 +46,10 @@ public interface UserApi {
      */
     @PUT("api/users/{id}")
     Call<ApiResponse<Void>> updateUser(@Path("id") long id, @Body Map<String, Object> body);
+
+    /**
+     * 登出。后端清除 Redis token 使其立即失效（踢人）。成功时 data = null。
+     */
+    @POST("api/auth/logout")
+    Call<ApiResponse<Void>> logout();
 }

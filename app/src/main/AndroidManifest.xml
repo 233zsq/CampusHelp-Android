@@ -41,10 +41,10 @@
         android:theme="@style/Theme.CampusHelp"
         tools:targetApi="31">
 
-        <!-- 高德 API Key：替换 PLACEHOLDER_AMAP_KEY 为你在 lbs.amap.com 申请的 Key -->
+        <!-- 高德 API Key（成员 D 已替换） -->
         <meta-data
             android:name="com.amap.api.v2.apikey"
-            android:value="PLACEHOLDER_AMAP_KEY" />
+            android:value="d8d094a58913f00c6c50239b5c78f9c1" />
 
         <!-- 主界面：底部导航壳，承载 4 个 Fragment Tab -->
         <activity
@@ -68,11 +68,17 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 
+        <!-- 信用分明细（成员 D） -->
+        <activity
+            android:name=".ui.CreditDetailActivity"
+            android:exported="false" />
+
         <!-- 聊天页（成员 C） -->
         <activity
             android:name=".ui.chat.ChatActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
+
 
         <!-- IM WebSocket 前台保活服务（成员 C 填充） -->
         <service
