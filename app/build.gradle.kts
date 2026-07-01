@@ -74,11 +74,10 @@ dependencies {
     implementation(libs.glide)
     annotationProcessor(libs.glide.compiler)
 
-    // ☆ 高德地图（成员 D）：从 lbs.amap.com 下载 SDK aar 放入 libs/，或配置高德 Maven 仓库后取消注释：
-    // implementation("com.amap.api:3dmap:latest.integration")
-    // implementation("com.amap.api:location:latest.integration")
-    // implementation("com.amap.api:search:latest.integration")
-    // 隐私合规已在 CampusHelpApp 通过 AmapPrivacyHelper 反射调用；SDK 引入后自动生效。
+    // ☆ 高德地图（成员 D）：从 lbs.amap.com 下载 3dmap / location / search 的 AAR 放入 app/libs/，
+    //    Gradle 自动拾取（libs/ 为空时此条为 no-op，不影响构建）。隐私合规已在 CampusHelpApp 通过
+    //    AmapPrivacyHelper 反射调用；SDK 引入后自动生效。
+    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar", "*.jar"))))
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.espresso.core)

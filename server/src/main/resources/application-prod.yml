@@ -21,3 +21,8 @@ jwt:
 
 server:
   port: 8080
+
+# 生产：上传文件通过外网 IP 访问
+app:
+  upload-dir: ${user.dir}/uploads
+  upload-url-prefix: http://47.239.124.167:8080/uploads

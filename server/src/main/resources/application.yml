@@ -7,6 +7,16 @@ spring:
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: Asia/Shanghai
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
+
+# 文件上传（成员 D：头像上传端点）
+app:
+  upload-dir: ${user.dir}/uploads
+  # dev 默认本机；prod 在 application-prod.yml 覆盖为外网地址
+  upload-url-prefix: http://localhost:8080/uploads
 
 # MyBatis-Plus
 mybatis-plus:

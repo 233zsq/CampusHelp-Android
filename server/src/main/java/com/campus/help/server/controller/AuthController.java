@@ -4,7 +4,9 @@ import com.campus.help.server.common.Result;
 import com.campus.help.server.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -22,6 +24,10 @@ import java.util.Map;
 public class AuthController {
 
     private final UserService userService;
+    private final RedisTemplate<String, Object> redisTemplate;
+
+    /** Redis 中缓存登录 token 的 key 前缀，须与 JwtAuthInterceptor 一致。 */
+    private static final String REDIS_TOKEN_PREFIX = "token:";
 
     /**
      * 注册。
@@ -73,5 +79,15 @@ public class AuthController {
                 "name", user.getName(),
                 "creditScore", user.getCreditScore()
         ));
+    }
+
+    /**
+     * 登出。删除 Redis 中的 token 缓存，使旧 token 立即失效（踢人）。
+     * POST /api/auth/logout
+     */
+    @PostMapping("/logout")
+    public Result<Void> logout(@RequestAttribute("currentUserId") Long currentUserId) {
+        redisTemplate.delete(REDIS_TOKEN_PREFIX + currentUserId);
+        return Result.ok();
     }
 }

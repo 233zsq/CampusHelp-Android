@@ -5,6 +5,7 @@
     <!-- 底部导航 -->
     <string name="tab_home">首页</string>
     <string name="tab_publish">发布</string>
+    <string name="tab_map">地图</string>
     <string name="tab_message">消息</string>
     <string name="tab_mine">我的</string>
 
