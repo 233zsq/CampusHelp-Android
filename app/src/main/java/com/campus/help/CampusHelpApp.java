@@ -34,6 +34,8 @@ public class CampusHelpApp extends Application {
         String token = TokenManager.getToken(this);
         if (token != null) {
             OkHttpProvider.setToken(token);
+            // 恢复登录态后重启 IM 长连接
+            com.campus.help.feature.im.WebSocketService.start(this);
         }
         UserManager.init(this); // 身份/用户信息统一入口（B/C/D 用）
         // 演示数据仅 debug 注入，release 包保持数据库干净（网络为唯一真源）

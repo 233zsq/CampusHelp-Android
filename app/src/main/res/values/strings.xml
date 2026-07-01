@@ -39,4 +39,10 @@
     <string name="channel_im_desc">接收私聊与订单消息提醒</string>
     <string name="channel_service_name">互助后台</string>
     <string name="channel_service_desc">消息长连接保活</string>
+
+    <!-- 聊天 -->
+    <string name="chat_input_hint">输入消息…</string>
+    <string name="chat_send">发送</string>
+    <string name="chat_empty">暂无消息，发条招呼吧</string>
+    <string name="chat_send_failed">发送失败，请检查网络</string>
 </resources>

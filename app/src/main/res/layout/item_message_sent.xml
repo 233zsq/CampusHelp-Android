@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="end"
+    android:orientation="vertical"
+    android:paddingVertical="4dp">
+
+    <TextView
+        android:id="@+id/message_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="4dp"
+        android:textColor="@color/text_secondary"
+        android:textSize="@dimen/text_caption"
+        tools:text="12:30" />
+
+    <TextView
+        android:id="@+id/message_content"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end"
+        android:layout_marginTop="2dp"
+        android:autoLink="web"
+        android:background="@drawable/bg_bubble_sent"
+        android:maxWidth="260dp"
+        android:padding="10dp"
+        android:textColor="@color/white"
+        android:textSize="@dimen/text_body"
+        tools:text="帮我取个快递，3 块" />
+</LinearLayout>

@@ -23,8 +23,8 @@ public class MessageServiceImpl implements MessageService {
         if (message.getTimestamp() == null) {
             message.setTimestamp(System.currentTimeMillis());
         }
-        if (message.getRead() == null) {
-            message.setRead(false);
+        if (message.getIsRead() == null) {
+            message.setIsRead(false);
         }
         messageMapper.insert(message);
         return message.getId();
@@ -49,11 +49,22 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
-    public void markRead(String conversationId) {
+    public void markRead(String conversationId, Long receiverId) {
         messageMapper.update(null,
                 new LambdaUpdateWrapper<ChatMessage>()
                         .eq(ChatMessage::getConversationId, conversationId)
-                        .set(ChatMessage::getRead, true)
+                        .eq(ChatMessage::getReceiverId, receiverId)
+                        .set(ChatMessage::getIsRead, true)
         );
+    }
+
+    @Override
+    public List<ChatMessage> listConversations(Long userId) {
+        return messageMapper.selectLatestPerConversation(userId);
+    }
+
+    @Override
+    public long unreadCount(Long userId) {
+        return messageMapper.selectUnreadCount(userId);
     }
 }

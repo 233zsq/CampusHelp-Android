@@ -38,3 +38,5 @@ server/target/
 server/build/
 server/.mvn/
 
+
+.claude/
