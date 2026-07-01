@@ -73,6 +73,13 @@
             android:name=".ui.CreditDetailActivity"
             android:exported="false" />
 
+        <!-- 聊天页（成员 C） -->
+        <activity
+            android:name=".ui.chat.ChatActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+
         <!-- IM WebSocket 前台保活服务（成员 C 填充） -->
         <service
             android:name=".feature.im.WebSocketService"
