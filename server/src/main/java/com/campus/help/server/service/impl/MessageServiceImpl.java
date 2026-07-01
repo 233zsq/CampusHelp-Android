@@ -23,8 +23,8 @@ public class MessageServiceImpl implements MessageService {
         if (message.getTimestamp() == null) {
             message.setTimestamp(System.currentTimeMillis());
         }
-        if (message.getReadStatus() == null) {
-            message.setReadStatus(false);
+        if (message.getIsRead() == null) {
+            message.setIsRead(false);
         }
         messageMapper.insert(message);
         return message.getId();
@@ -54,7 +54,7 @@ public class MessageServiceImpl implements MessageService {
                 new LambdaUpdateWrapper<ChatMessage>()
                         .eq(ChatMessage::getConversationId, conversationId)
                         .eq(ChatMessage::getReceiverId, receiverId)
-                        .set(ChatMessage::getReadStatus, true)
+                        .set(ChatMessage::getIsRead, true)
         );
     }
 

@@ -91,7 +91,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
             msg.setReceiverId(to);
             msg.setContent(content == null ? "" : content.toString());
             msg.setType(type);
-            msg.setReadStatus(false);
+            msg.setIsRead(false);
             Long id = messageService.send(msg); // 落库 + 填 timestamp + id
 
             // 规范化消息（不含 seq）
