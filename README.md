@@ -12,8 +12,8 @@ CampusHelp/
 │       │   ├── base/             # BaseActivity / BaseFragment / BaseViewModel 基类
 │       │   ├── bus/              # MessageBus 事件总线
 │       │   ├── db/               # Room 数据库（AppDatabase）
-│       │   ├── network/          # Retrofit + OkHttp 网络层
-│       │   ├── utils/            # 工具类（Token / 通知 / 权限 / 时间 / AMap 隐私合规）
+│       │   ├── network/          # Retrofit + OkHttp 网络层（含 UploadApi）
+│       │   ├── utils/            # 工具类（Token / UserManager / LocationHelper / 权限 / 通知 / 时间 / AMap 隐私合规）
 │       │   └── widget/           # 自定义控件（CreditGaugeView 信用分仪表盘）
 │       ├── data/                 # 数据层
 │       │   ├── dao/              # Room DAO 接口
@@ -22,15 +22,17 @@ CampusHelp/
 │       ├── feature/im/           # IM 模块
 │       │   └── WebSocketService  # WebSocket 前台保活服务
 │       └── ui/                   # 界面层
-│           ├── MainActivity      # 底部导航壳（4 个 Tab）
+│           ├── MainActivity      # 底部导航壳（5 个 Tab：首页/发布/地图/消息/我的）
 │           ├── HomeFragment      # 首页 / 接单大厅
 │           ├── PublishFragment   # 发布任务
+│           ├── MapFragment       # 地图模式（高德 MapView + 任务 Marker + 定位）
 │           ├── MessageFragment   # 消息
-│           ├── MineFragment      # 个人中心（信用分仪表盘 + 退出登录）
+│           ├── MineFragment      # 个人中心（头像/昵称/学号/信用分网络化 + 头像上传 + 退出登录）
+│           ├── CreditDetailActivity  # 信用分明细（GET /api/credits，加分绿/减分红）
 │           └── login/            # 登录 / 注册
 ├── server/                       # Spring Boot 后端
 │   └── src/main/java/com/campus/help/server/
-│       ├── controller/           # REST 接口（Auth / Task / Order / Message / Credit / User）
+│       ├── controller/           # REST 接口（Auth / Task / Order / Message / Credit / User / Upload）
 │       ├── service/              # 业务逻辑层
 │       ├── mapper/               # MyBatis-Plus Mapper
 │       ├── entity/               # 实体类
@@ -47,9 +49,9 @@ CampusHelp/
 | 🏠 **首页（接单大厅）** | 🚧 任务卡片列表（含状态标签：待接单/已接单/已完成/已取消/超时），筛选排序下拉刷新待补 |
 | ✏️ **发布任务** | 🚧 发布表单（类型/标题/要求/报酬/地址/截止时间），预览 + 提交后端 `POST /api/tasks` |
 | 💬 **即时通讯** | 📋 自研 WebSocket（后端端点 + 前端连接待做）；当前仅有 REST 消息接口 + 前台保活空壳 + MessageBus |
-| 👤 **个人中心** | 🚧 信用分仪表盘（Canvas 自绘 0~1000，分区间着色）+ 退出登录；资料/头像/记录入口待补 |
+| 👤 **个人中心** | ✅ 头像/昵称/学号/信用分走网络（`UserManager`）+ 头像上传（相册/拍照）+ 信用明细页 + 退出登录；「我发布的/我接的」入口待 B 对接 |
 | 🔐 **登录注册** | ✅ JWT 令牌认证，学号 + 密码注册/登录，`TokenManager` 持久化 + 登录闸门 |
-| 📍 **地图定位** | 📋 高德地图 SDK（3dmap / location / search 依赖已注释），定位 + 逆地理 + 任务地图模式 |
+| 📍 **地图定位** | 🚧 高德 SDK 已集成（3dmap/location/search AAR + `LocationHelper` 定位/逆地理），`MapFragment` 展示任务 Marker + 定位按钮；点 Marker 进任务详情待 B 对接 |
 | ⭐ **信用系统** | 🚧 后端已就绪（credit_record + user.creditScore 同步并 clamp 0~1000）；单一真源已对接（`UserManager` → `user.creditScore`），前端加减触发待对接 |
 
 > 状态图例：✅ 已完成 · 🚧 部分完成 · 📋 未开始（详见下方 [团队分工](#团队分工)）
@@ -66,7 +68,7 @@ CampusHelp/
 | 网络 | Retrofit 2 + OkHttp（自带 WebSocket） |
 | 图片加载 | Glide |
 | UI | Material Design + ViewBinding + RecyclerView + ViewPager2 |
-| 地图（预留） | 高德地图 3D Map / Location / Search SDK |
+| 地图 | 高德地图 3D Map / Location / Search SDK（AAR 本地依赖，`app/libs/`） |
 | 最低 SDK | Android 7.0 (API 24) |
 | 目标 SDK | Android 16 (API 36) |
 
@@ -106,7 +108,7 @@ mvn spring-boot:run
 
 1. 用 Android Studio 打开项目根目录
 2. 等待 Gradle 同步完成
-3. 如需高德地图功能：在 `AndroidManifest.xml` 中替换 `PLACEHOLDER_AMAP_KEY` 为你在 [lbs.amap.com](https://lbs.amap.com) 申请的 Key
+3. 高德地图：API Key 已填入 `AndroidManifest.xml`；从 [lbs.amap.com](https://lbs.amap.com) 下载 3dmap / location / search 的 AAR 放入 `app/libs/`（详见 `app/libs/README.md`），Gradle 同步后自动拾取。无 AAR 时地图 Tab 占位、不影响构建
 4. 选择模拟器或真机，点击 Run
 
 > **提示**：登录 / 任务 / User / Credit 均依赖后端（纯网络）；Message 仍走 Room 兜底（待 C 迁移）。debug 包额外注入 `MockDataSeeder` 演示数据。
@@ -342,10 +344,10 @@ task ──1:1──▶ order          (task_id)
 | 登录态 | A 待做，阻塞全员 | ✅ **已闭环**（JWT 后端 + LoginActivity + TokenManager + 闸门 + 启动恢复） |
 | 任务数据源 | Room | ✅ TaskRepository 已纯网络（TaskApi） |
 | User/Credit/Message 数据源 | Room | User/Credit ✅ 已纯网络（仿 TaskRepository）；Message ⚠️ 仍 Room（C 待迁） |
-| 后端 | 不存在 | ✅ Spring Boot 已部署（`47.239.124.167`），auth/task/order/credit/message REST 就绪；缺 WS / 上传 / 登出 / 便捷接口 |
+| 后端 | 不存在 | ✅ Spring Boot 已部署（`47.239.124.167`），auth/task/order/credit/message/upload REST 就绪，logout 已补；缺 WS / 便捷接口 |
 | 信用分真源 | 本地双写 | ✅ 后端已同步 `user.creditScore` ↔ `credit_record` sum 并 clamp 0-1000，前端只消费 |
 | IM 方案 | WebSocket / 环信 二选一 | 🎯 定为自研 WS，但后端没 WS → C own 后端端点 |
-| 头像上传 | 前端做 | 🎯 后端没上传端点 → D own 后端端点 |
+| 头像上传 | 前端做 | ✅ 后端 `POST /api/upload` + `/uploads/**` 静态映射已就绪，D 端到端打通（相册/拍照 → 上传 → 回写 → 刷新） |
 
 ### 📌 全局约定（所有人遵守）
 
@@ -360,7 +362,7 @@ task ──1:1──▶ order          (task_id)
 | 🔐 **A** | 身份与信用 + 数据架构 | 下阶段任务全部完成 | UserManager · 信用真源 · User/Credit 网络仓库 · logout |
 | 📋 **B** | 任务流端到端 | 🔴 握手点：接单通知 + 单主状态管理 | 接单→通知→完成/取消闭环 · OrderApi · "我发布的" |
 | 💬 **C** | 即时通讯端到端（含后端 WS） | WS 空壳，从后端端点开始 | 后端 WS · 真连接 · ChatActivity · 会话列表 |
-| 🗺️ **D** | 地图 + 个人中心端到端（含后端上传） | 信用盘占位，引入高德 | 高德 SDK · 地图模式 · 个人中心 · 头像上传 · 图表 |
+| 🗺️ **D** | 地图 + 个人中心端到端（含后端上传） | 🟢 地图+个人中心+头像上传已完成，剩图表 | 高德 SDK · 地图模式 · 个人中心网络化 · 头像上传 · 图表（未做） |
 
 <details>
 <summary><b>🔐 成员 A · 身份与信用 + 数据架构</b> —— 展开查看任务明细</summary>
@@ -458,30 +460,38 @@ task ──1:1──▶ order          (task_id)
 
 **负责范围**：高德 SDK 集成/定位/逆地理、任务地图模式、个人中心页、头像上传、数据可视化图表、后端文件上传端点。
 
-> 后端没上传端点，头像上传被阻塞，所以 D own 后端上传。MineFragment 现在硬编码 820 分，要改成调 A 的网络接口。
+> 🟢 地图 + 个人中心 + 头像上传端到端已打通，本轮收尾；仅剩 MPAndroidChart 图表未做。"我发布的/我接的"入口已埋好，等 B 的 publisherId/takerId 便捷接口对接。
 
 **当前地基（已完成）**
-- `MineFragment`（CreditGaugeView 占位 + 退出登录）、`CreditGaugeView` / `EmptyView`
-- 高德 SDK 依赖被注释、`PLACEHOLDER_AMAP_KEY` 待替换
-- 头像/相机权限 + FileProvider 已配（`PermissionUtils` 已定义但无人调用）
-- 后端 `User.avatar` 字段在，无上传端点；`PUT /api/users/{id}` 可回写 avatar URL
-- 缺：高德 SDK、`LocationHelper`、地图模式、个人中心资料、头像上传、MPAndroidChart（未引入）
+- `MineFragment`（头像/昵称/学号/信用分网络化 + 头像上传 + 退出登录）、`CreditGaugeView` / `EmptyView`
+- 高德 SDK AAR 已入 `app/libs/`，API Key 已填 `AndroidManifest.xml`，`LocationHelper`（定位 + 逆地理）已封装
+- `MapFragment`（MapView + 任务 Marker + 定位按钮 + 信息窗）、底部导航「地图」Tab
+- `CreditDetailActivity`（信用变动明细，加分绿/减红）
+- 头像/相机权限 + FileProvider 已用起（`PermissionUtils` 相机权限 + `PickVisualMedia`/`TakePicture`）
+- 后端 `POST /api/upload` + `/uploads/**` 静态映射 + `application.yml` multipart 限制；`PUT /api/users/{id}` 回写 avatar
+- 缺：MPAndroidChart 图表（未引入）、地图 Marker → 任务详情跳转（待 B）、我发布的/接的入口（待 B 便捷接口）
 
 **下阶段任务（建议顺序）**
-1. **引入高德 SDK** — 取消注释 3dmap / location / search；替换 `PLACEHOLDER_AMAP_KEY`；封装 `LocationHelper`（getCurrentLocation / latlngToAddress）；启动时 `registerForActivityResult` 接定位权限。
-2. **任务地图模式** — 首页加「地图」Tab，高德展示周围 Marker（数据复用 B 的 `GET /api/tasks`）；点 Marker 弹卡片 → `TaskDetailActivity`（B 的产出）；「附近」筛选配合 B 的列表。
-3. **个人中心页（数据走网络）** — `MineFragment`：头像/昵称/学号/信用分（调 A 的 `GET /api/users/{id}`，替换硬编码 820）；入口：我发布的（B 的 `GET /api/tasks?publisherId=`）、我接的（B 的 `GET /api/orders?takerId=`）、信用分明细（A 的 `GET /api/credits?userId=`，加分绿/减分红）；退出登录调 A 的 `POST /api/auth/logout` + 清 `TokenManager` + 停 C 的 `WebSocketService`。
-4. **头像上传（D owns 后端）** — 后端加 `POST /api/upload`（MultipartFile，存本地磁盘或 OSS，返回 URL）；前端相册/相机（`registerForActivityResult` + `PermissionUtils` 媒体/相机权限），Glide 显示，上传后 `PUT /api/users/{id}` 回写 avatar URL。
-5. **数据可视化** — 引入 MPAndroidChart；近 7 天接单/发单数、信用分变化曲线（数据来自 B 任务接口 + A 信用记录）。
+1. ✅ **引入高德 SDK**（已完成）— 3dmap / location / search 的 AAR 放入 `app/libs/`（`fileTree` 自动拾取）；API Key 已填入 `AndroidManifest.xml`；封装 `LocationHelper`（getCurrentLocation 单次定位 + latlngToAddress 逆地理）；隐私合规在 `CampusHelpApp` 经 `AmapPrivacyHelper` 已就绪。
+2. ✅ **任务地图模式**（已完成）— 新增 `MapFragment` + 底部导航「地图」Tab（MainActivity 改 5 Tab）；高德 `MapView` 展示任务 Marker（数据复用 `TaskRepository.observeAll()` 取 lat/lng，无坐标跳过），自动缩放视野；点 Marker 弹信息窗（标题 + 报酬/地址）；「定位」按钮单次定位 + 移动相机；点信息窗 → 任务详情待 B 的 `TaskDetailActivity` 对接。
+3. ✅ **个人中心页（数据走网络）**（已完成）— `MineFragment`：头像/昵称/学号/信用分全部走 `UserManager.getUserInfo()`（替换硬编码 820）；信用分明细入口 → `CreditDetailActivity`（调 `GET /api/credits?userId=`，加分绿/减分红 adapter）；退出登录调 `UserManager.logout()`（后端 `POST /api/auth/logout` + 清 `TokenManager` + 停 `WebSocketService`）。
+4. ✅ **头像上传（D owns 后端）**（已完成）— 后端 `POST /api/upload`（MultipartFile 存本地磁盘，返回 URL）+ `/uploads/**` 静态资源映射（`WebMvcConfig`，匿名可访问）+ `application.yml` multipart 限制；前端 `UploadApi`/`UploadResponse` + `UserManager.uploadAvatar()`（读 Uri → POST /api/upload → PUT /api/users/{id} 回写 avatar → 拉最新）；相册（`PickVisualMedia`）/ 拍照（`TakePicture` + FileProvider + 相机权限），Glide 显示。
+5. 📋 **数据可视化**（未做）— 引入 MPAndroidChart；近 7 天接单/发单数、信用分变化曲线（数据来自 B 任务接口 + A 信用记录）。
 
-**产出物**：高德地图看附近任务 · 完整个人中心（网络数据）· 头像上传端到端 · 图表
+**握手点 — 待 B 对接**
+| # | 需求 | 涉及模块 | 说明 |
+|:--|:-----|:---------|:-----|
+| 1 | **地图 Marker → 任务详情** | D + B | `MapFragment` 点 Marker 信息窗 → `TaskDetailActivity`（B 产出），现仅 toast 占位 |
+| 2 | **个人中心「我发布的/我接的」** | D + B | `MineFragment` 入口已埋好，等 B 的 `GET /api/tasks?publisherId=` / `GET /api/orders?takerId=` 便捷接口 |
 
-**依赖**：A 的登录态 + `getUserInfo` + 信用分明细；B 的任务/接单数据（地图 Marker + 我发布的/接的）；头像上传后端端点 D 自己补。
+**产出物**：高德地图看附近任务（定位 + Marker + 信息窗）· 完整个人中心（网络数据）· 头像上传端到端（后端端点 + 前端相册/拍照）· 信用明细页 · ✅ 已交付；图表 📋 未做
+
+**依赖**：A 的登录态 + `getUserInfo` + 信用明细（已就绪并已对接）；B 的任务数据（地图 Marker 已对接 `TaskRepository`，"我发布的/接的"入口待 B 便捷接口）；头像上传后端端点 D 自己补（已完成）。
 
 </details>
 
 ### ⏱️ 并行节奏
 
-- **第一波（已完成）**：✅ A 登录态 · ✅ B 发布+列表+详情 · C 后端 WS 待做 · D 高德 SDK 待做。
-- **🔴 握手点**：B 接单通知（需 C 消息）· B 单主状态管理（需 D 个人中心）· C WS 握手（需 A 确认 token）· D 地图 Marker（需 B 任务数据）。
-- **第二波（握手后）**：B 接单闭环 + 通知 · C 聊天页 + 会话列表 · D 个人中心 + 头像上传 · A UserManager 被各方消费。
+- **第一波（已完成）**：✅ A 登录态 · ✅ B 发布+列表+详情 · C 后端 WS 待做 · ✅ D 高德 SDK + 地图模式 + 个人中心网络化 + 头像上传。
+- **🔴 握手点**：B 接单通知（需 C 消息）· B 单主状态管理（需 D 个人中心入口，已埋好待 B 便捷接口）· C WS 握手（需 A 确认 token）· D 地图 Marker→任务详情（需 B `TaskDetailActivity`）。
+- **第二波（握手后）**：B 接单闭环 + 通知 · C 聊天页 + 会话列表 · D 图表（MPAndroidChart）+ 地图→详情跳转 + 我发布的/接的 · A UserManager 被各方消费。
