@@ -8,6 +8,7 @@ import com.campus.help.core.base.Callback;
 import com.campus.help.core.network.ApiResponse;
 import com.campus.help.core.network.CreditApi;
 import com.campus.help.core.network.RetrofitClient;
+import com.campus.help.core.network.dto.SumResponse;
 import com.campus.help.data.model.CreditRecord;
 
 import java.util.Collections;
@@ -20,7 +21,7 @@ import retrofit2.Response;
  * 信用分数据源（远端）。通过 Retrofit 调后端 CreditController。
  *
  * <p>信用分展示请用 {@link UserRepository#observeUser} 取 user.creditScore（后端已与变动同步并 clamp 0~1000）；
- * 本仓库只负责变动明细（{@link #observeByUser}）与加减（{@link #addRecord}）。
+ * 本仓库只负责变动明细（{@link #observeByUser}）、总变动量（{@link #observeSum}）与加减（{@link #addRecord}）。
  * 各 observe* 方法返回 LiveData，内部异步请求，成功后 postValue。
  */
 public class CreditRepository extends BaseRepository {
@@ -49,6 +50,32 @@ public class CreditRepository extends BaseRepository {
             @Override
             public void onFailure(Call<ApiResponse<List<CreditRecord>>> c, Throwable t) {
                 live.postValue(Collections.emptyList());
+            }
+        });
+        return live;
+    }
+
+    /**
+     * 信用分总变动量（GET /api/credits/sum?userId=）。
+     * 成功 post 总变动量（Integer，可能为 0），失败 post 0。
+     */
+    public LiveData<Integer> observeSum(long userId) {
+        MutableLiveData<Integer> live = new MutableLiveData<>(0);
+        api.sum(userId).enqueue(new retrofit2.Callback<ApiResponse<SumResponse>>() {
+            @Override
+            public void onResponse(Call<ApiResponse<SumResponse>> c,
+                                   Response<ApiResponse<SumResponse>> resp) {
+                if (resp.isSuccessful() && resp.body() != null && resp.body().isSuccess()
+                        && resp.body().getData() != null) {
+                    live.postValue(resp.body().getData().sum);
+                } else {
+                    live.postValue(0);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ApiResponse<SumResponse>> c, Throwable t) {
+                live.postValue(0);
             }
         });
         return live;

@@ -8,6 +8,7 @@ import com.campus.help.core.network.RetrofitClient;
 import com.campus.help.core.utils.AmapPrivacyHelper;
 import com.campus.help.core.utils.NotificationHelper;
 import com.campus.help.core.utils.TokenManager;
+import com.campus.help.core.utils.UserManager;
 import com.campus.help.data.repo.MockDataSeeder;
 
 /**
@@ -34,6 +35,7 @@ public class CampusHelpApp extends Application {
         if (token != null) {
             OkHttpProvider.setToken(token);
         }
+        UserManager.init(this); // 身份/用户信息统一入口（B/C/D 用）
         MockDataSeeder.seedIfEmpty(this); // 无后端时填充演示数据
     }
 }

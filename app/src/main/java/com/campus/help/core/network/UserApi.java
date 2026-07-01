@@ -5,10 +5,13 @@ import com.campus.help.core.network.dto.LoginResponse;
 import com.campus.help.core.network.dto.RegisterRequest;
 import com.campus.help.data.model.User;
 
+import java.util.Map;
+
 import retrofit2.Call;
 import retrofit2.http.Body;
 import retrofit2.http.GET;
 import retrofit2.http.POST;
+import retrofit2.http.PUT;
 import retrofit2.http.Path;
 
 /**
@@ -35,4 +38,12 @@ public interface UserApi {
      */
     @GET("api/users/{id}")
     Call<ApiResponse<User>> getById(@Path("id") long id);
+
+    /**
+     * 更新用户资料（昵称 / 头像 / 手机号）。PUT /api/users/{id}
+     * body 只需包含要更新的字段：{ "name": ..., "avatar": ..., "phone": ... }。
+     * creditScore 不在此更新（信用分真源在后端，由 credit_record 驱动）。
+     */
+    @PUT("api/users/{id}")
+    Call<ApiResponse<Void>> updateUser(@Path("id") long id, @Body Map<String, Object> body);
 }

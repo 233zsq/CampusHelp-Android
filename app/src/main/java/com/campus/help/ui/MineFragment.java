@@ -6,23 +6,20 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
-import androidx.lifecycle.LiveData;
 
 import com.campus.help.core.base.BaseFragment;
 import com.campus.help.core.network.OkHttpProvider;
 import com.campus.help.core.utils.TokenManager;
+import com.campus.help.core.utils.UserManager;
 import com.campus.help.data.model.User;
-import com.campus.help.data.repo.UserRepository;
 import com.campus.help.databinding.FragmentMineBinding;
 import com.campus.help.ui.login.LoginActivity;
 
 /**
  * 我的 / 个人中心（成员 D）。展示信用分仪表盘 + 退出登录。
- * 信用分单一真源：GET /api/users/{id} 的 user.creditScore（成员 A）。
+ * 信用分单一真源：通过 {@link UserManager#getUserInfo()} 取当前用户 user.creditScore（成员 A）。
  */
 public class MineFragment extends BaseFragment<FragmentMineBinding> {
-
-    private UserRepository userRepository;
 
     @Override
     protected FragmentMineBinding createBinding(@NonNull LayoutInflater inflater, ViewGroup container) {
@@ -46,15 +43,13 @@ public class MineFragment extends BaseFragment<FragmentMineBinding> {
 
     @Override
     protected void initData() {
-        userRepository = new UserRepository(requireContext());
-        long uid = TokenManager.getUserId(requireContext());
-        LiveData<User> user = userRepository.observeUser(uid);
-        user.observe(getViewLifecycleOwner(), u -> {
+        UserManager.get().getUserInfo().observe(getViewLifecycleOwner(), (User u) -> {
             if (binding == null || u == null) {
                 return;
             }
             binding.creditGauge.setScore(u.creditScore);
             binding.creditGauge.setVisibility(View.VISIBLE);
         });
+        UserManager.get().refreshUserInfo();
     }
 }

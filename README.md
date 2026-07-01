@@ -50,7 +50,7 @@ CampusHelp/
 | 👤 **个人中心** | 🚧 信用分仪表盘（Canvas 自绘 0~1000，分区间着色）+ 退出登录；资料/头像/记录入口待补 |
 | 🔐 **登录注册** | ✅ JWT 令牌认证，学号 + 密码注册/登录，`TokenManager` 持久化 + 登录闸门 |
 | 📍 **地图定位** | 📋 高德地图 SDK（3dmap / location / search 依赖已注释），定位 + 逆地理 + 任务地图模式 |
-| ⭐ **信用系统** | 🚧 后端已就绪（credit_record + user.creditScore 同步并 clamp 0~1000）；前端加减触发与单一真源待对接 |
+| ⭐ **信用系统** | 🚧 后端已就绪（credit_record + user.creditScore 同步并 clamp 0~1000）；单一真源已对接（`UserManager` → `user.creditScore`），前端加减触发待对接 |
 
 > 状态图例：✅ 已完成 · 🚧 部分完成 · 📋 未开始（详见下方 [团队分工](#团队分工)）
 
@@ -142,7 +142,7 @@ buildConfigField("String", "WS_BASE_URL", "\"ws://<your-server-ip>:8080/ws\"")
 |:---|:---|:---|
 | 登录态 | A 待做，阻塞全员 | ✅ **已闭环**（JWT 后端 + LoginActivity + TokenManager + 闸门 + 启动恢复） |
 | 任务数据源 | Room | ✅ TaskRepository 已纯网络（TaskApi） |
-| User/Credit/Message 数据源 | Room | ⚠️ 仍 Room，待各自 owner 迁移到网络 |
+| User/Credit/Message 数据源 | Room | User/Credit ✅ 已纯网络（仿 TaskRepository）；Message ⚠️ 仍 Room（C 待迁） |
 | 后端 | 不存在 | ✅ Spring Boot 已部署（`47.239.124.167`），auth/task/order/credit/message REST 就绪；缺 WS / 上传 / 登出 / 便捷接口 |
 | 信用分真源 | 本地双写 | ✅ 后端已同步 `user.creditScore` ↔ `credit_record` sum 并 clamp 0-1000，前端只消费 |
 | IM 方案 | WebSocket / 环信 二选一 | 🎯 定为自研 WS，但后端没 WS → C own 后端端点 |
@@ -158,7 +158,7 @@ buildConfigField("String", "WS_BASE_URL", "\"ws://<your-server-ip>:8080/ws\"")
 
 | 成员 | 领域 | 当前阶段 | 关键产出 |
 |:---:|:---|:---|:---|
-| 🔐 **A** | 身份与信用 + 数据架构 | 登录已闭环，pivot 到数据迁移 | UserManager · 信用真源 · User/Credit 网络仓库 |
+| 🔐 **A** | 身份与信用 + 数据架构 | User/Credit 已迁网络 + UserManager 就绪 | UserManager · 信用真源 · User/Credit 网络仓库 |
 | 📋 **B** | 任务流端到端 | 列表已绑网络，补体验+详情+接单 | 发布/接单/完成 · TaskDetailActivity · OrderApi |
 | 💬 **C** | 即时通讯端到端（含后端 WS） | WS 空壳，从后端端点开始 | 后端 WS · 真连接 · ChatActivity · 会话列表 |
 | 🗺️ **D** | 地图 + 个人中心端到端（含后端上传） | 信用盘占位，引入高德 | 高德 SDK · 地图模式 · 个人中心 · 头像上传 · 图表 |
@@ -168,25 +168,25 @@ buildConfigField("String", "WS_BASE_URL", "\"ws://<your-server-ip>:8080/ws\"")
 
 **负责范围**：全局登录态/身份基础设施（维护）、信用分体系端到端、User/Credit 数据源迁移到网络、后端身份/信用便捷接口。
 
-> A 原来的阻塞活（登录）已完成，pivot 到「理顺数据架构」——User/Credit 仓库还停在 Room，跟 TaskRepository 纯网络路线不一致，A own 这两个实体所以由 A 迁。
+> A 原来的阻塞活（登录）已完成，pivot 到「理顺数据架构」——User/Credit 仓库现已迁移到纯网络（与 TaskRepository 路线一致），UserManager 统一入口已就绪。
 
 **当前地基（已完成）**
 - `LoginActivity` 调 `/api/auth/login` + `/register`，JWT 持久化（`TokenManager`）+ `OkHttpProvider.setToken`
 - `MainActivity` 登录闸门 + `CampusHelpApp` 启动恢复 token
 - `UserApi` / `ApiResponse` / `TokenInterceptor` / `RetrofitClient`
 - 后端 `/api/auth/*`、`/api/users/{id}`、`/api/credits`(+`/sum`) 就绪；`CreditServiceImpl` 已同步 creditScore 与 sum 并 clamp 0-1000
-- `UserRepository` / `CreditRepository` 仍本地 Room（待迁移）
+- `UserRepository` / `CreditRepository` 已迁移到纯网络（仿 `TaskRepository`，补 `UserApi.updateUser` / `CreditApi.sum`）
 
 **下阶段任务（建议顺序）**
 1. **统一信用分真源（最高优先，B/D 显示都依赖）** — 展示信用分统一调 `GET /api/users/{id}`（取 `creditScore`）；明细调 `GET /api/credits?userId=`；删掉前端对本地 `User.creditScore` 的双写。
-2. **UserRepository / CreditRepository 迁移到网络** — 仿 `TaskRepository` 纯网络写法，补全 `UserApi`（getUser / updateUser）、`CreditApi`（list / sum / add）。
-3. **UserManager 封装** — 封 `TokenManager` + `UserApi`：`getCurrentUserId()`、`getUserInfo()`、`refreshUserInfo()`，给 B/C/D 统一入口。
+2. ✅ **UserRepository / CreditRepository 迁移到网络**（已完成）— 仿 `TaskRepository` 纯网络写法，补全 `UserApi`（getUser / updateUser）、`CreditApi`（list / sum / add）。
+3. ✅ **UserManager 封装**（已完成）— 封 `TokenManager` + `UserApi`：`getCurrentUserId()`、`getUserInfo()`、`refreshUserInfo()`，给 B/C/D 统一入口。
 4. **后端补身份便捷接口** — `POST /api/auth/logout`（清 Redis token，踢人机制已就绪只差接口）；（可后置）refresh token。
 5. **清理** — `MockDataSeeder` 限 debug build。
 
 **产出物**：`UserManager.getCurrentUserId()/getUserInfo()` · 信用分单一真源 + 加减明细（端到端）· User/Credit 网络仓库
 
-**依赖/阻塞**：A **不再阻塞** B/C/D；但 `UserManager.getUserInfo()` 被 B（任务详情显示发布者）和 D（个人中心）消费，尽早出接口。
+**依赖/阻塞**：A **不再阻塞** B/C/D；`UserManager.getUserInfo()` 已就绪，D（个人中心 `MineFragment`）已对接，B（任务详情显示发布者）待对接。
 
 </details>
 
