@@ -8,6 +8,7 @@ import com.campus.help.core.network.RetrofitClient;
 import com.campus.help.core.utils.AmapPrivacyHelper;
 import com.campus.help.core.utils.NotificationHelper;
 import com.campus.help.core.utils.TokenManager;
+import com.campus.help.core.utils.UserManager;
 import com.campus.help.data.repo.MockDataSeeder;
 
 /**
@@ -36,6 +37,10 @@ public class CampusHelpApp extends Application {
             // 恢复登录态后重启 IM 长连接
             com.campus.help.feature.im.WebSocketService.start(this);
         }
-        MockDataSeeder.seedIfEmpty(this); // 无后端时填充演示数据
+        UserManager.init(this); // 身份/用户信息统一入口（B/C/D 用）
+        // 演示数据仅 debug 注入，release 包保持数据库干净（网络为唯一真源）
+        if (BuildConfig.DEBUG) {
+            MockDataSeeder.seedIfEmpty(this);
+        }
     }
 }

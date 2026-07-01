@@ -15,6 +15,25 @@
     <string name="confirm">确定</string>
     <string name="cancel">取消</string>
 
+    <!-- 发布任务 -->
+    <string name="publish_type">任务类型</string>
+    <string name="publish_type_express">跑腿</string>
+    <string name="publish_type_group">拼单</string>
+    <string name="publish_type_secondhand">二手</string>
+    <string name="publish_title_hint">任务标题</string>
+    <string name="publish_content_hint">任务要求</string>
+    <string name="publish_reward_hint">报酬金额（元）</string>
+    <string name="publish_location_hint">详细地址</string>
+    <string name="publish_deadline_hint">截止时间</string>
+    <string name="publish_button">发布任务</string>
+    <string name="publish_success_title">测试：发布信息</string>
+    <string name="publish_please_select_type">请选择任务类型</string>
+    <string name="publish_please_enter_title">请输入任务标题</string>
+    <string name="publish_please_enter_content">请输入任务要求</string>
+    <string name="publish_please_enter_location">请输入详细地址</string>
+    <string name="publish_please_select_deadline">请选择截止时间</string>
+    <string name="publish_deadline_must_be_future">截止时间必须晚于当前时间</string>
+
     <!-- 通知渠道 -->
     <string name="channel_im_name">即时消息</string>
     <string name="channel_im_desc">接收私聊与订单消息提醒</string>

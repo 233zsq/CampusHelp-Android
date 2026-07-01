@@ -44,13 +44,13 @@ CampusHelp/
 
 | 模块 | 说明 |
 |------|------|
-| 🏠 **首页（接单大厅）** | 🚧 浏览任务列表（纯网络 TaskApi），支持跑腿/拼单/二手三类；筛选、排序、下拉刷新待补 |
-| ✏️ **发布任务** | 📋 发布表单（类型/标题/内容/报酬/地点/截止），调 `POST /api/tasks` —— `PublishFragment` 当前为空壳 |
+| 🏠 **首页（接单大厅）** | 🚧 任务卡片列表（含状态标签：待接单/已接单/已完成/已取消/超时），筛选排序下拉刷新待补 |
+| ✏️ **发布任务** | 🚧 发布表单（类型/标题/要求/报酬/地址/截止时间），预览 + 提交后端 `POST /api/tasks` |
 | 💬 **即时通讯** | 📋 自研 WebSocket（后端端点 + 前端连接待做）；当前仅有 REST 消息接口 + 前台保活空壳 + MessageBus |
 | 👤 **个人中心** | 🚧 信用分仪表盘（Canvas 自绘 0~1000，分区间着色）+ 退出登录；资料/头像/记录入口待补 |
 | 🔐 **登录注册** | ✅ JWT 令牌认证，学号 + 密码注册/登录，`TokenManager` 持久化 + 登录闸门 |
 | 📍 **地图定位** | 📋 高德地图 SDK（3dmap / location / search 依赖已注释），定位 + 逆地理 + 任务地图模式 |
-| ⭐ **信用系统** | 🚧 后端已就绪（credit_record + user.creditScore 同步并 clamp 0~1000）；前端加减触发与单一真源待对接 |
+| ⭐ **信用系统** | 🚧 后端已就绪（credit_record + user.creditScore 同步并 clamp 0~1000）；单一真源已对接（`UserManager` → `user.creditScore`），前端加减触发待对接 |
 
 > 状态图例：✅ 已完成 · 🚧 部分完成 · 📋 未开始（详见下方 [团队分工](#团队分工)）
 
@@ -109,7 +109,7 @@ mvn spring-boot:run
 3. 如需高德地图功能：在 `AndroidManifest.xml` 中替换 `PLACEHOLDER_AMAP_KEY` 为你在 [lbs.amap.com](https://lbs.amap.com) 申请的 Key
 4. 选择模拟器或真机，点击 Run
 
-> **提示**：登录与任务列表依赖后端（纯网络）；User / Credit / Message 仍可走 Room + Mock 数据兜底，待统一迁移到网络。
+> **提示**：登录 / 任务 / User / Credit 均依赖后端（纯网络）；Message 仍走 Room 兜底（待 C 迁移）。debug 包额外注入 `MockDataSeeder` 演示数据。
 
 ### 4. 配置后端地址
 
@@ -120,15 +120,199 @@ buildConfigField("String", "API_BASE_URL", "\"http://<your-server-ip>:8080/\"")
 buildConfigField("String", "WS_BASE_URL", "\"ws://<your-server-ip>:8080/ws\"")
 ```
 
+### 5. 部署后端到服务器（生产）
+
+生产后端跑在阿里云**香港** ECS `47.239.124.167`（域名 `zsq-233.xin`，香港机器免 ICP 备案），对外入口是 **`https://zsq-233.xin`**（nginx 反代 443 → 本机 8080，Let's Encrypt 证书）。后端由 systemd 托管，**源码直接从本仓库 GitHub 拉取**——公开库，服务器匿名可 clone，无需手动 scp。本机连不上 GitHub 也没关系，服务器自己 pull，本机只负责 push。
+
+**服务器布局**
+
+| 路径 / 单位 | 说明 |
+|---|---|
+| `/opt/campushelp/repo` | `git clone` 自本仓库，部署时 `git pull` 拉最新 `main` |
+| `/opt/campushelp/deploy.sh` | 部署脚本：pull → 打包 → 换 jar → 重启 |
+| `/opt/campushelp/app.jar` | 运行中的 fat jar（`-Dspring.profiles.active=prod`） |
+| `/opt/campushelp/env` | 生产密钥（`MYSQL_PASSWORD` / `JWT_SECRET`），权限 600，不进仓库 |
+| systemd `campushelp` | 开机自启 + 崩溃自动拉起（`Restart=always`），`After=mysql.service redis-server.service` |
+| nginx（80/443） | 反代 → `127.0.0.1:8080`，`http` 301→`https`；`/ws` 带 WebSocket upgrade 头；配置 `/etc/nginx/sites-available/zsq-233.xin` |
+| Let's Encrypt | 证书在 `/etc/letsencrypt/live/zsq-233.xin/`，certbot 申请 + systemd timer 自动续期 |
+
+MySQL / Redis 都在本机（`127.0.0.1`），不对公网。安全组放行 `80` / `443`（nginx 对外入口）和 `8080`（后端直连，可关）；`3306` / `6379` 不对公网。
+
+**日常部署（一条命令）**
+
+```bash
+# 1) 本地先把改动合并到 main 并 push（经你的代理）
+git push origin main
+
+# 2) 服务器拉取 + 打包 + 重启
+ssh -i <your-key.pem> root@47.239.124.167 /opt/campushelp/deploy.sh
+```
+
+`deploy.sh` 内部依次执行：`cd /opt/campushelp/repo && git pull --ff-only` → `cd server && mvn -q clean package -DskipTests` → 备份旧 jar 为 `app.jar.bak.<时间戳>` → `cp target/campushelp-server-1.0.0.jar /opt/campushelp/app.jar` → `systemctl restart campushelp` → 打印 `systemctl is-active` 与最近日志。
+
+> 脚本用 `--ff-only` 只拉 `main`，改动须先合并到 `main`（与 PR 合 `main` 的流程一致）。覆盖 `app.jar` 时旧进程仍跑旧 jar（已加载进内存），`restart` 后才切到新的，无中间态。
+
+**常用运维命令（服务器上）**
+
+```bash
+systemctl status campushelp        # 状态 + 最近日志
+systemctl restart campushelp       # 手动重启
+journalctl -u campushelp -f        # 实时日志
+journalctl -u campushelp -n 50     # 最近 50 行
+```
+
+**回滚**：每次部署都留 `app.jar.bak.<时间戳>`，恢复最近一个备份即可：
+
+```bash
+cp /opt/campushelp/app.jar.bak.<时间戳> /opt/campushelp/app.jar
+systemctl restart campushelp
+```
+
+**域名 + HTTPS（nginx + Let's Encrypt，一次性配置）**
+
+域名 `zsq-233.xin` A 记录指向 ECS `47.239.124.167`（阿里云**香港**机器，免 ICP 备案）。对外入口为 `https://zsq-233.xin`，nginx 反代 443 → 本机 8080，`http` 自动 301 跳 `https`。首次配置（服务器上）：
+
+```bash
+# 1) 装 nginx + certbot
+apt update && apt install -y nginx certbot python3-certbot-nginx
+
+# 2) 写反代配置（80 → 8080，/ws 带 WebSocket upgrade 头）
+cat > /etc/nginx/sites-available/zsq-233.xin <<'EOF'
+server {
+    listen 80;
+    server_name zsq-233.xin;
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    location /ws {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_read_timeout 86400s;
+    }
+}
+EOF
+ln -sf /etc/nginx/sites-available/zsq-233.xin /etc/nginx/sites-enabled/
+rm -f /etc/nginx/sites-enabled/default
+nginx -t && systemctl reload nginx
+
+# 3) 申请证书 + 自动配 443 + HTTP→HTTPS 跳转（需安全组已放行 80/443）
+certbot --nginx -d zsq-233.xin --non-interactive --agree-tos --register-unsafely-without-email --redirect
+```
+
+证书在 `/etc/letsencrypt/live/zsq-233.xin/`，certbot 的 systemd timer 自动续期（证书 90 天到期，无需手动）。`/ws` 的 upgrade 头已配好，等后端 WebSocket 端点实现后 `wss://` 直接通。
+
+配好后 App 的地址（`app/build.gradle.kts`）：
+
+```kotlin
+buildConfigField("String", "API_BASE_URL", "\"https://zsq-233.xin/\"")
+buildConfigField("String", "WS_BASE_URL", "\"wss://zsq-233.xin/ws\"")
+```
+
 ## 数据库表
 
-| 表名 | 说明 |
-|------|------|
-| `user` | 用户表（学号、密码 BCrypt、昵称、头像、信用分） |
-| `task` | 任务表（类型 跑腿/拼单/二手、报酬、状态、地点坐标） |
-| `order` | 接单表（关联任务、接单人、状态 进行中/已完成/超时） |
-| `chat_message` | 聊天消息（会话ID、发送者、接收者、内容类型） |
-| `credit_record` | 信用分变动记录（变动值、原因、时间） |
+> 所有时间字段统一为 `BIGINT` 毫秒时间戳；所有表均含 `deleted` 逻辑删除标记。
+
+### 1. `user` — 用户表
+
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| `id` | BIGINT | PK AUTO_INCREMENT | 用户 ID |
+| `student_id` | VARCHAR(32) | UNIQUE NOT NULL | 学号，登录凭证 |
+| `password` | VARCHAR(128) | NOT NULL | BCrypt 加密密码，不可逆 |
+| `name` | VARCHAR(64) | DEFAULT '' | 昵称 / 真实姓名 |
+| `avatar` | VARCHAR(256) | DEFAULT '' | 头像 URL（上传后回写） |
+| `credit_score` | INT | DEFAULT 600 | 信用分，范围 0~1000，与 `credit_record` 求和同步 |
+| `phone` | VARCHAR(20) | DEFAULT '' | 手机号（预留） |
+| `created_at` | BIGINT | DEFAULT 0 | 注册时间戳(ms) |
+| `deleted` | TINYINT | DEFAULT 0 | 逻辑删除：0=正常 / 1=已删除 |
+
+### 2. `task` — 任务表
+
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| `id` | BIGINT | PK AUTO_INCREMENT | 任务 ID |
+| `publisher_id` | BIGINT | NOT NULL | 发布者，关联 `user.id`（后端从 JWT 取，客户端传入被覆盖防越权） |
+| `type` | TINYINT | DEFAULT 0 | 任务类型：0=跑腿 / 1=拼单 / 2=二手 |
+| `title` | VARCHAR(128) | NOT NULL | 任务标题（必填） |
+| `content` | TEXT | — | 任务要求 / 详细描述 |
+| `reward` | DOUBLE | DEFAULT 0 | 报酬金额（元），0=面议 |
+| `location` | VARCHAR(128) | DEFAULT '' | 地点文案（如"北区宿舍 3 号楼"） |
+| `latitude` | DOUBLE | DEFAULT 0 | 纬度（地图定位） |
+| `longitude` | DOUBLE | DEFAULT 0 | 经度（地图定位） |
+| `status` | TINYINT | DEFAULT 0 | 0=待接单 / 1=已接单 / 2=已完成 / 3=已取消 |
+| `deadline` | BIGINT | DEFAULT 0 | 接单截止时间戳(ms)，超时未接单前端标红 |
+| `created_at` | BIGINT | DEFAULT 0 | 发布时间戳(ms) |
+| `deleted` | TINYINT | DEFAULT 0 | 逻辑删除 |
+
+**状态流转：**
+```
+待接单(0) ──接单──▶ 已接单(1) ──完成──▶ 已完成(2)
+    │                                    │
+    └──────────── 取消 ──────────────────▶ 已取消(3)
+```
+
+### 3. `order` — 接单表
+
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| `id` | BIGINT | PK AUTO_INCREMENT | 接单记录 ID |
+| `task_id` | BIGINT | NOT NULL | 关联 `task.id`（同一任务同一时间最多一条进行中） |
+| `taker_id` | BIGINT | NOT NULL | 接单人，关联 `user.id` |
+| `accepted_at` | BIGINT | DEFAULT 0 | 接单时间戳(ms) |
+| `deadline` | BIGINT | DEFAULT 0 | 完成截止时间戳(ms)，超时扣信用分 |
+| `status` | TINYINT | DEFAULT 0 | 0=进行中 / 1=已完成 / 2=超时 |
+| `completed_at` | BIGINT | DEFAULT 0 | 实际完成时间戳(ms) |
+| `deleted` | TINYINT | DEFAULT 0 | 逻辑删除 |
+
+**与 task 联动：** 接单 → 创建 order + 更新 task.status=1；完成/超时 → 更新 order.status + 更新 task.status + 触发信用分变动。
+
+### 4. `chat_message` — 聊天消息表
+
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| `id` | BIGINT | PK AUTO_INCREMENT | 消息 ID |
+| `conversation_id` | VARCHAR(128) | NOT NULL | 会话 ID（双方 userId 按大小拼接，或关联 taskId） |
+| `sender_id` | BIGINT | NOT NULL | 发送者，关联 `user.id` |
+| `receiver_id` | BIGINT | NOT NULL | 接收者，关联 `user.id` |
+| `content` | TEXT | — | 消息内容（文本正文 / 图片 URL / 订单卡片 JSON） |
+| `type` | TINYINT | DEFAULT 0 | 0=文本 / 1=图片 / 2=订单卡片 |
+| `timestamp` | BIGINT | DEFAULT 0 | 发送时间戳(ms) |
+| `read` | TINYINT | DEFAULT 0 | 已读标记：0=未读 / 1=已读 |
+| `deleted` | TINYINT | DEFAULT 0 | 逻辑删除 |
+
+**消息流转：** 发送 → REST 落库 → WebSocket 推送在线接收方；接收方进聊天页 GET 拉历史 + 标记已读。
+
+### 5. `credit_record` — 信用分变动记录表
+
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| `id` | BIGINT | PK AUTO_INCREMENT | 记录 ID |
+| `user_id` | BIGINT | NOT NULL | 关联 `user.id` |
+| `delta` | INT | DEFAULT 0 | 变动值：正=加分 / 负=减分 |
+| `reason` | VARCHAR(256) | DEFAULT '' | 变动原因（如"任务完成奖励"、"接单超时扣分"） |
+| `timestamp` | BIGINT | DEFAULT 0 | 变动时间戳(ms) |
+| `deleted` | TINYINT | DEFAULT 0 | 逻辑删除 |
+
+**同步机制：** `user.creditScore = SUM(delta) GROUP BY user_id`，每次 addRecord 后自动重算并 clamp 到 0~1000。
+
+**典型场景：** 完成任务 +10 · 被接单 +5 · 接单超时 -10 · 恶意取消 -20
+
+### 表关系简图
+
+```
+user ──1:N──▶ task           (publisher_id)
+user ──1:N──▶ order          (taker_id)
+user ──1:N──▶ credit_record  (user_id)
+user ──1:N──▶ chat_message   (sender_id / receiver_id)
+task ──1:1──▶ order          (task_id)
+```
 
 ## 团队分工
 
@@ -143,7 +327,7 @@ buildConfigField("String", "WS_BASE_URL", "\"ws://<your-server-ip>:8080/ws\"")
 |:---|:---|:---|
 | 登录态 | A 待做，阻塞全员 | ✅ **已闭环**（JWT 后端 + LoginActivity + TokenManager + 闸门 + 启动恢复） |
 | 任务数据源 | Room | ✅ TaskRepository 已纯网络（TaskApi） |
-| User/Credit/Message 数据源 | Room | ⚠️ 仍 Room，待各自 owner 迁移到网络 |
+| User/Credit/Message 数据源 | Room | User/Credit ✅ 已纯网络（仿 TaskRepository）；Message ⚠️ 仍 Room（C 待迁） |
 | 后端 | 不存在 | ✅ Spring Boot 已部署（`47.239.124.167`），auth/task/order/credit/message REST 就绪；缺 WS / 上传 / 登出 / 便捷接口 |
 | 信用分真源 | 本地双写 | ✅ 后端已同步 `user.creditScore` ↔ `credit_record` sum 并 clamp 0-1000，前端只消费 |
 | IM 方案 | WebSocket / 环信 二选一 | 🎯 定为自研 WS，但后端没 WS → C own 后端端点 |
@@ -159,8 +343,8 @@ buildConfigField("String", "WS_BASE_URL", "\"ws://<your-server-ip>:8080/ws\"")
 
 | 成员 | 领域 | 当前阶段 | 关键产出 |
 |:---:|:---|:---|:---|
-| 🔐 **A** | 身份与信用 + 数据架构 | 登录已闭环，pivot 到数据迁移 | UserManager · 信用真源 · User/Credit 网络仓库 |
-| 📋 **B** | 任务流端到端 | 列表已绑网络，补体验+详情+接单 | 发布/接单/完成 · TaskDetailActivity · OrderApi |
+| 🔐 **A** | 身份与信用 + 数据架构 | 下阶段任务全部完成 | UserManager · 信用真源 · User/Credit 网络仓库 · logout |
+| 📋 **B** | 任务流端到端 | 🔴 握手点：接单通知 + 单主状态管理 | 接单→通知→完成/取消闭环 · OrderApi · "我发布的" |
 | 💬 **C** | 即时通讯端到端（含后端 WS） | WS 空壳，从后端端点开始 | 后端 WS · 真连接 · ChatActivity · 会话列表 |
 | 🗺️ **D** | 地图 + 个人中心端到端（含后端上传） | 信用盘占位，引入高德 | 高德 SDK · 地图模式 · 个人中心 · 头像上传 · 图表 |
 
@@ -169,25 +353,25 @@ buildConfigField("String", "WS_BASE_URL", "\"ws://<your-server-ip>:8080/ws\"")
 
 **负责范围**：全局登录态/身份基础设施（维护）、信用分体系端到端、User/Credit 数据源迁移到网络、后端身份/信用便捷接口。
 
-> A 原来的阻塞活（登录）已完成，pivot 到「理顺数据架构」——User/Credit 仓库还停在 Room，跟 TaskRepository 纯网络路线不一致，A own 这两个实体所以由 A 迁。
+> A 原来的阻塞活（登录）已完成，pivot 到「理顺数据架构」——User/Credit 仓库现已迁移到纯网络（与 TaskRepository 路线一致），UserManager 统一入口已就绪。
 
 **当前地基（已完成）**
 - `LoginActivity` 调 `/api/auth/login` + `/register`，JWT 持久化（`TokenManager`）+ `OkHttpProvider.setToken`
 - `MainActivity` 登录闸门 + `CampusHelpApp` 启动恢复 token
 - `UserApi` / `ApiResponse` / `TokenInterceptor` / `RetrofitClient`
 - 后端 `/api/auth/*`、`/api/users/{id}`、`/api/credits`(+`/sum`) 就绪；`CreditServiceImpl` 已同步 creditScore 与 sum 并 clamp 0-1000
-- `UserRepository` / `CreditRepository` 仍本地 Room（待迁移）
+- `UserRepository` / `CreditRepository` 已迁移到纯网络（仿 `TaskRepository`，补 `UserApi.updateUser` / `CreditApi.sum`）
 
 **下阶段任务（建议顺序）**
-1. **统一信用分真源（最高优先，B/D 显示都依赖）** — 展示信用分统一调 `GET /api/users/{id}`（取 `creditScore`）；明细调 `GET /api/credits?userId=`；删掉前端对本地 `User.creditScore` 的双写。
-2. **UserRepository / CreditRepository 迁移到网络** — 仿 `TaskRepository` 纯网络写法，补全 `UserApi`（getUser / updateUser）、`CreditApi`（list / sum / add）。
-3. **UserManager 封装** — 封 `TokenManager` + `UserApi`：`getCurrentUserId()`、`getUserInfo()`、`refreshUserInfo()`，给 B/C/D 统一入口。
-4. **后端补身份便捷接口** — `POST /api/auth/logout`（清 Redis token，踢人机制已就绪只差接口）；（可后置）refresh token。
-5. **清理** — `MockDataSeeder` 限 debug build。
+1. ✅ **统一信用分真源（最高优先，B/D 显示都依赖）**（已完成）— 展示信用分统一调 `GET /api/users/{id}`（取 `creditScore`）；明细调 `GET /api/credits?userId=`；删掉前端对本地 `User.creditScore` 的双写。
+2. ✅ **UserRepository / CreditRepository 迁移到网络**（已完成）— 仿 `TaskRepository` 纯网络写法，补全 `UserApi`（getUser / updateUser）、`CreditApi`（list / sum / add）。
+3. ✅ **UserManager 封装**（已完成）— 封 `TokenManager` + `UserApi`：`getCurrentUserId()`、`getUserInfo()`、`refreshUserInfo()`，给 B/C/D 统一入口。
+4. ✅ **后端补身份便捷接口**（已完成）— `POST /api/auth/logout`（清 Redis token，踢人机制已就绪只差接口）；（可后置）refresh token。
+5. ✅ **清理**（已完成）— `MockDataSeeder` 限 debug build。
 
 **产出物**：`UserManager.getCurrentUserId()/getUserInfo()` · 信用分单一真源 + 加减明细（端到端）· User/Credit 网络仓库
 
-**依赖/阻塞**：A **不再阻塞** B/C/D；但 `UserManager.getUserInfo()` 被 B（任务详情显示发布者）和 D（个人中心）消费，尽早出接口。
+**依赖/阻塞**：A **不再阻塞** B/C/D；`UserManager.getUserInfo()` 已就绪，D（个人中心 `MineFragment`）已对接，B（任务详情显示发布者）待对接。
 
 </details>
 
@@ -196,25 +380,34 @@ buildConfigField("String", "WS_BASE_URL", "\"ws://<your-server-ip>:8080/ws\"")
 
 **负责范围**：任务 CRUD、列表筛选排序、发布表单、任务详情、接单/完成/取消状态流转、Order 域端到端、后端 task/order 便捷接口。
 
-> TaskRepository 已纯网络、HomeFragment 已能绑网络列表。重心从「搭列表」转到「补体验 + 详情/接单流程」。前端没有 OrderApi，B 要建。
+> 🔴 **已到达握手点** — 发布与接单基础链路已打通，需要 C（消息通知）和 D（个人中心）配合完成跨模块联动。
 
 **当前地基（已完成）**
 - `Task` / `Order` 实体、`TaskDao` / `OrderDao`、`TaskRepository`（纯网络）
 - `TaskApi`（GET 分页 / `?type=` / `?status=` / POST / PUT status）
-- `HomeFragment` 已绑 `TaskRepository.observeAll()` + `TaskAdapter`
+- `HomeFragment` 已绑 `TaskRepository.observeAll()` + `TaskAdapter`（含状态标签：待接单/已接单/已完成/已取消/超时）
+- `PublishFragment` 发布表单（类型/标题/要求/报酬/地址/截止时间，预览 + 提交后端）
+- `TaskDetailActivity` 任务详情页（全部字段展示 + 接单按钮智能状态）
 - 后端 `/api/tasks`、`/api/orders` 全就绪
-- 缺：`OrderApi`、`TaskDetailActivity`、`PublishFragment` 逻辑、筛选 UI、DiffUtil
+- 缺：`OrderApi`、筛选 UI、DiffUtil
 
-**下阶段任务（建议顺序）**
-1. **修 MainActivity Tab 切换** — 现在 `FragmentTransaction` 可能每次 new Fragment 丢滚动/输入状态；改 `show/hide` 或 ViewPager2 + BottomNavigationView。
-2. **列表体验升级** — `BaseAdapter.notifyDataSetChanged` → `ListAdapter` + `DiffUtil`；顶部筛选 Tab（全部/跑腿/拼单/二手 → `GET /api/tasks?type=`）+ 排序；loading / empty / SwipeRefreshLayout 下拉刷新。
-3. **发布任务页** — 补全 `PublishFragment` 表单，提交调 `POST /api/tasks`（`publisherId` 后端强制覆盖为 currentUserId，前端不传）。
-4. **OrderApi + 接单流程** — 建 `OrderApi`（POST / GET `?takerId=` / PUT `/{id}/complete`）；新建 `TaskDetailActivity`（详情 + 发布者信息调 A 的 `UserManager.getUserInfo()` + 信用分）；接单 `POST /api/orders` + `PUT /api/tasks/{id}/status=1`；完成/取消触发信用分加减（调 A 的 `POST /api/credits`）。
-5. **后端补 task/order 便捷接口** — 我的发布 `GET /api/tasks?publisherId=`（现不支持，B 加参数）；报酬排序参数。
+**握手点 — 需跨模块联动**
 
-**产出物**：可发布/接单/完成/取消 · 首页筛选排序 + 刷新 + 空状态 · `TaskDetailActivity` · `OrderApi`
+| # | 需求 | 涉及模块 | 说明 |
+|:--|:-----|:---------|:-----|
+| 1 | **接单时通知发布者** | B + C | 接单人点击接单 → `POST /api/orders` 创建订单 → 后端自动发一条 `chat_message`（type=2 订单卡片）给任务发布者，内容包含接单人信息 + 任务摘要；前端 C 的 MessageFragment 展示未读消息 |
+| 2 | **单主查看"我发布的"** | B + D | 个人中心新增「我发布的」入口，调 `GET /api/tasks?publisherId={currentUserId}` 展示发布者自己的任务列表，每条显示当前状态（待接单/已接单/已完成/已取消），点击进入详情 |
+| 3 | **单主更新接单状态** | B | 在"我发布的"列表中，已接单的任务提供「确认完成」和「取消订单」操作，调 `PUT /api/tasks/{id}/status` 更新 task 状态 + `PUT /api/orders/{id}/complete` 完结订单，触发信用分变动 |
 
-**依赖**：A 的 `currentUserId`（已就绪）+ `getUserInfo`（尽早对接）；地图 Marker +「附近」筛选依赖 D 的 `LocationHelper`；完成订单触发信用分调 A 的 `POST /api/credits`。
+**下阶段任务**
+1. **OrderApi 对接** — 建 `OrderApi`（POST / GET `?takerId=` / PUT `/{id}/complete`），接单按钮从测试弹窗改为真实 API 调用。
+2. **接单通知（联动 C）** — 接单成功后调消息接口通知发布者；后端 `POST /api/orders` 返回时自动创建通知消息。
+3. **单主任务管理（联动 D）** — "我发布的"列表 + 确认完成 / 取消订单操作。
+4. **列表体验升级** — `ListAdapter` + `DiffUtil` + 筛选 Tab + SwipeRefreshLayout。
+
+**产出物**：接单→通知→完成/取消 全流程闭环 · "我发布的"任务管理 · `OrderApi`
+
+**依赖**：C 的消息通知 + D 的个人中心入口；`UserManager.getUserInfo()`（A）。
 
 </details>
 
@@ -275,5 +468,6 @@ buildConfigField("String", "WS_BASE_URL", "\"ws://<your-server-ip>:8080/ws\"")
 
 ### ⏱️ 并行节奏
 
-- **第一波（立即并行，互不阻塞）**：A 做信用真源 + UserManager · B 做列表升级 + 发布页 · C 做后端 WS · D 做高德 SDK。
-- **汇合点**：B 的 `TaskDetailActivity` ← A 的 `getUserInfo` · D 的个人中心 ← A+B 的接口 · C 的 WS 握手 ← A 确认 token 传递方式 · D 的地图 Marker ← B 的任务数据。
+- **第一波（已完成）**：✅ A 登录态 · ✅ B 发布+列表+详情 · C 后端 WS 待做 · D 高德 SDK 待做。
+- **🔴 握手点**：B 接单通知（需 C 消息）· B 单主状态管理（需 D 个人中心）· C WS 握手（需 A 确认 token）· D 地图 Marker（需 B 任务数据）。
+- **第二波（握手后）**：B 接单闭环 + 通知 · C 聊天页 + 会话列表 · D 个人中心 + 头像上传 · A UserManager 被各方消费。

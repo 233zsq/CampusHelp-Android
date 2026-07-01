@@ -1,15 +1,165 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_page">
+    android:background="@color/bg_page"
+    android:clipToPadding="false"
+    android:fillViewport="true"
+    android:padding="@dimen/page_margin">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:text="发布任务（成员 B 填充）"
-        android:textColor="@color/text_secondary"
-        android:textSize="@dimen/text_body" />
+        android:orientation="vertical"
+        android:paddingBottom="24dp">
 
-</FrameLayout>
+        <!-- 任务类型 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="任务类型"
+            android:textColor="@color/text_primary"
+            android:textSize="@dimen/text_body"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/type_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/type_express"
+                style="@style/PublishTypeChip"
+                android:layout_marginEnd="8dp"
+                android:text="跑腿" />
+
+            <TextView
+                android:id="@+id/type_group_buy"
+                style="@style/PublishTypeChip"
+                android:layout_marginEnd="8dp"
+                android:text="拼单" />
+
+            <TextView
+                android:id="@+id/type_secondhand"
+                style="@style/PublishTypeChip"
+                android:text="二手" />
+        </LinearLayout>
+
+        <!-- 任务标题 -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/title_layout"
+            style="@style/PublishTextInput"
+            android:layout_marginBottom="16dp"
+            android:hint="任务标题"
+            app:counterMaxLength="30">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text"
+                android:maxLength="30" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- 任务要求 -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/content_layout"
+            style="@style/PublishTextInput"
+            android:layout_marginBottom="16dp"
+            android:hint="任务要求"
+            app:counterMaxLength="200">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_content"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="top|start"
+                android:inputType="textMultiLine"
+                android:maxLength="200"
+                android:minLines="3" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- 报酬 -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/reward_layout"
+            style="@style/PublishTextInput"
+            android:layout_marginBottom="16dp"
+            android:hint="报酬金额（元）"
+            app:prefixText="¥">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_reward"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="numberDecimal" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- 详细地址 -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/location_layout"
+            style="@style/PublishTextInput"
+            android:layout_marginBottom="16dp"
+            android:hint="详细地址"
+            app:counterMaxLength="50">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_location"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textPostalAddress"
+                android:maxLength="50" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- 截止时间 -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/deadline_layout"
+            style="@style/PublishTextInput"
+            android:layout_marginBottom="24dp"
+            android:hint="截止时间"
+            app:endIconMode="custom"
+            app:endIconDrawable="@android:drawable/ic_menu_today">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_deadline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:cursorVisible="false"
+                android:focusable="false"
+                android:inputType="none" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- 操作按钮 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_preview"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_marginEnd="12dp"
+                android:layout_weight="1"
+                android:text="预览"
+                android:textSize="@dimen/text_body"
+                app:cornerRadius="12dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_publish"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:text="发布任务"
+                android:textSize="@dimen/text_body"
+                app:cornerRadius="12dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView>
