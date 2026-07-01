@@ -12,6 +12,9 @@ import androidx.annotation.Nullable;
 
 import com.campus.help.R;
 import com.campus.help.core.base.BaseFragment;
+import com.campus.help.core.base.Callback;
+import com.campus.help.data.model.Task;
+import com.campus.help.data.repo.TaskRepository;
 import com.campus.help.databinding.FragmentPublishBinding;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -22,7 +25,7 @@ import java.util.Locale;
 /**
  * 发布任务界面。
  * 包含：任务类型 / 标题 / 要求 / 报酬 / 地址 / 截止时间。
- * 点击发布后展示测试信息，暂不提交后端。
+ * 预览：弹窗展示填写内容；发布：提交至后端。
  */
 public class PublishFragment extends BaseFragment<FragmentPublishBinding> {
 
@@ -32,24 +35,26 @@ public class PublishFragment extends BaseFragment<FragmentPublishBinding> {
     private final Calendar deadlineCalendar = Calendar.getInstance();
     private final SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
 
+    private TaskRepository taskRepository;
+
     @Override
     protected FragmentPublishBinding createBinding(@NonNull LayoutInflater inflater, ViewGroup container) {
         return FragmentPublishBinding.inflate(inflater, container, false);
     }
 
     @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-    }
-
-    @Override
     protected void initView() {
+        taskRepository = new TaskRepository();
+
         // 任务类型选择
         setupTypeSelector();
 
         // 截止时间点击弹出选择器
         binding.etDeadline.setOnClickListener(v -> showDatePicker());
         binding.deadlineLayout.setEndIconOnClickListener(v -> showDatePicker());
+
+        // 预览按钮
+        binding.btnPreview.setOnClickListener(v -> onPreviewClick());
 
         // 发布按钮
         binding.btnPublish.setOnClickListener(v -> onPublishClick());
@@ -66,7 +71,6 @@ public class PublishFragment extends BaseFragment<FragmentPublishBinding> {
     }
 
     private void selectType(int viewId) {
-        // 重置所有
         binding.typeExpress.setSelected(false);
         binding.typeGroupBuy.setSelected(false);
         binding.typeSecondhand.setSelected(false);
@@ -112,26 +116,29 @@ public class PublishFragment extends BaseFragment<FragmentPublishBinding> {
                 }, hour, minute, true).show();
     }
 
-    // ==================== 发布 ====================
+    // ==================== 表单校验 ====================
 
-    private void onPublishClick() {
-        // 校验
+    /**
+     * 校验表单并组装 Task 对象，失败弹错误提示并返回 null。
+     */
+    @Nullable
+    private Task validateAndBuildTask() {
         if (selectedType == -1) {
             showErrorDialog(getString(R.string.publish_please_select_type));
-            return;
+            return null;
         }
 
         String title = binding.etTitle.getText().toString().trim();
         if (title.isEmpty()) {
             binding.titleLayout.setError(getString(R.string.publish_please_enter_title));
-            return;
+            return null;
         }
         binding.titleLayout.setError(null);
 
         String content = binding.etContent.getText().toString().trim();
         if (content.isEmpty()) {
             binding.contentLayout.setError(getString(R.string.publish_please_enter_content));
-            return;
+            return null;
         }
         binding.contentLayout.setError(null);
 
@@ -142,48 +149,109 @@ public class PublishFragment extends BaseFragment<FragmentPublishBinding> {
                 reward = Double.parseDouble(rewardStr);
             } catch (NumberFormatException e) {
                 binding.rewardLayout.setError("请输入正确的金额");
-                return;
+                return null;
             }
         }
+        binding.rewardLayout.setError(null);
 
         String location = binding.etLocation.getText().toString().trim();
         if (location.isEmpty()) {
             binding.locationLayout.setError(getString(R.string.publish_please_enter_location));
-            return;
+            return null;
         }
         binding.locationLayout.setError(null);
-
-        // 清除报酬错误
-        binding.rewardLayout.setError(null);
 
         String deadlineStr = binding.etDeadline.getText().toString().trim();
         if (deadlineStr.isEmpty()) {
             showErrorDialog(getString(R.string.publish_please_select_deadline));
-            return;
+            return null;
         }
 
         long deadline = deadlineCalendar.getTimeInMillis();
         if (deadline <= System.currentTimeMillis()) {
             showErrorDialog(getString(R.string.publish_deadline_must_be_future));
-            return;
+            return null;
         }
 
-        // 构建测试信息
+        Task task = new Task();
+        task.type = selectedType;
+        task.title = title;
+        task.content = content;
+        task.reward = reward;
+        task.location = location;
+        task.deadline = deadline;
+        return task;
+    }
+
+    // ==================== 预览 ====================
+
+    private void onPreviewClick() {
+        Task task = validateAndBuildTask();
+        if (task == null) return;
+
         String[] typeNames = {"跑腿", "拼单", "二手"};
-        String info = "【测试】发布信息预览\n\n"
-                + "类型：" + typeNames[selectedType] + "\n"
-                + "标题：" + title + "\n"
-                + "要求：" + content + "\n"
-                + "报酬：¥" + (reward > 0 ? String.format("%.2f", reward) : "面议") + "\n"
-                + "地址：" + location + "\n"
-                + "截止：" + deadlineStr + "\n\n"
-                + "（暂未提交到后端）";
+        String info = "【预览】发布信息\n\n"
+                + "类型：" + typeNames[task.type] + "\n"
+                + "标题：" + task.title + "\n"
+                + "要求：" + task.content + "\n"
+                + "报酬：¥" + (task.reward > 0 ? String.format("%.2f", task.reward) : "面议") + "\n"
+                + "地址：" + task.location + "\n"
+                + "截止：" + binding.etDeadline.getText().toString().trim() + "\n\n"
+                + "（预览模式，未提交）";
 
         new MaterialAlertDialogBuilder(requireContext())
-                .setTitle(R.string.publish_success_title)
+                .setTitle("任务预览")
                 .setMessage(info)
                 .setPositiveButton(R.string.confirm, null)
                 .show();
+    }
+
+    // ==================== 发布到后端 ====================
+
+    private void onPublishClick() {
+        Task task = validateAndBuildTask();
+        if (task == null) return;
+
+        binding.btnPublish.setEnabled(false);
+        binding.btnPublish.setText("发布中…");
+
+        taskRepository.insert(task, new Callback<Long>() {
+            @Override
+            public void onResult(Long taskId) {
+                if (getActivity() == null) return;
+                requireActivity().runOnUiThread(() -> {
+                    binding.btnPublish.setEnabled(true);
+                    binding.btnPublish.setText(R.string.publish_button);
+
+                    if (taskId != null) {
+                        new MaterialAlertDialogBuilder(requireContext())
+                                .setTitle("发布成功")
+                                .setMessage("任务已发布，ID：" + taskId)
+                                .setPositiveButton(R.string.confirm, (d, w) -> clearForm())
+                                .show();
+                    } else {
+                        new MaterialAlertDialogBuilder(requireContext())
+                                .setTitle("发布失败")
+                                .setMessage("网络异常或未登录，请重试")
+                                .setPositiveButton(R.string.confirm, null)
+                                .show();
+                    }
+                });
+            }
+        });
+    }
+
+    /** 清空表单 */
+    private void clearForm() {
+        binding.typeExpress.setSelected(false);
+        binding.typeGroupBuy.setSelected(false);
+        binding.typeSecondhand.setSelected(false);
+        selectedType = -1;
+        binding.etTitle.setText("");
+        binding.etContent.setText("");
+        binding.etReward.setText("");
+        binding.etLocation.setText("");
+        binding.etDeadline.setText("");
     }
 
     private void showErrorDialog(String message) {
