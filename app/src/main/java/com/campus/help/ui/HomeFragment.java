@@ -36,7 +36,7 @@ public class HomeFragment extends BaseFragment<FragmentHomeBinding> {
 
     @Override
     protected void initData() {
-        repository = new TaskRepository(requireContext());
+        repository = new TaskRepository();
         LiveData<List<Task>> data = repository.observeAll();
         data.observe(getViewLifecycleOwner(), tasks -> adapter.submit(tasks));
     }

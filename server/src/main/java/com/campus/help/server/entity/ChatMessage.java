@@ -1,0 +1,43 @@
+package com.campus.help.server.entity;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Data;
+
+/**
+ * 聊天消息实体 — 对应 Android 端 com.campus.help.data.model.ChatMessage + Room messages 表。
+ * type: 0 文本 1 图片 2 订单卡片。
+ */
+@Data
+@TableName("chat_message")
+public class ChatMessage {
+
+    @TableId(type = IdType.AUTO)
+    private Long id;
+
+    /** 会话 ID（双方 userId 组合 / 任务 ID） */
+    private String conversationId;
+
+    /** 发送者 user.id */
+    private Long senderId;
+
+    /** 接收者 user.id */
+    private Long receiverId;
+
+    /** 消息内容 */
+    private String content;
+
+    /** 0 文本 1 图片 2 订单卡片 */
+    private Integer type;
+
+    /** 发送时间戳 (ms) */
+    private Long timestamp;
+
+    /** 是否已读 */
+    private Boolean read;
+
+    @TableLogic
+    private Integer deleted;
+}

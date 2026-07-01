@@ -1,0 +1,23 @@
+# 生产环境配置。密码/密钥走环境变量，不落盘。
+# 启动：java -jar -Dspring.profiles.active=prod campushelp-server.jar
+spring:
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/campushelp?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USER:campushelp}
+    password: ${MYSQL_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 3000ms
+
+jwt:
+  # 生产必须换成长随机串，可用：openssl rand -base64 48
+  secret: ${JWT_SECRET}
+  expiration: 604800000  # 7天
+
+server:
+  port: 8080

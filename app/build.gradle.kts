@@ -20,8 +20,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // 后端地址占位，联调时替换；无后端时走本地 Room mock 兜底
-        buildConfigField("String", "API_BASE_URL", "\"https://api.campushelp.example.com/\"")
-        buildConfigField("String", "WS_BASE_URL", "\"wss://api.campushelp.example.com/ws\"")
+        buildConfigField("String", "API_BASE_URL", "\"http://47.239.124.167:8080/\"")
+        buildConfigField("String", "WS_BASE_URL", "\"ws://47.239.124.167:8080/ws\"")
     }
 
     buildTypes {

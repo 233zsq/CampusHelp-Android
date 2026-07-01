@@ -32,3 +32,9 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# Maven (server backend)
+server/target/
+server/build/
+server/.mvn/
+
