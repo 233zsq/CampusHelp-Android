@@ -1,6 +1,7 @@
 package com.campus.help.server.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -35,7 +36,8 @@ public class ChatMessage {
     /** 发送时间戳 (ms) */
     private Long timestamp;
 
-    /** 是否已读 */
+    /** 是否已读。列名 is_read（避开 MySQL 保留字 `read`，否则 INSERT 报语法错） */
+    @TableField("is_read")
     private Boolean read;
 
     @TableLogic

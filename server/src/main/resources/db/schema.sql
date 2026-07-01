@@ -69,12 +69,12 @@ CREATE TABLE IF NOT EXISTS `chat_message` (
     `content`         TEXT         COMMENT '消息内容',
     `type`            TINYINT      NOT NULL DEFAULT 0 COMMENT '0文本 1图片 2订单卡片',
     `timestamp`       BIGINT       NOT NULL DEFAULT 0 COMMENT '发送时间戳(ms)',
-    `read`            TINYINT      NOT NULL DEFAULT 0 COMMENT '是否已读 0否 1是',
+    `is_read`         TINYINT      NOT NULL DEFAULT 0 COMMENT '是否已读 0否 1是（避开 MySQL 保留字 read）',
     `deleted`         TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
     PRIMARY KEY (`id`),
     KEY `idx_conversation_id` (`conversation_id`),
     KEY `idx_receiver_id` (`receiver_id`),
-    KEY `idx_receiver_read` (`receiver_id`, `read`)
+    KEY `idx_receiver_read` (`receiver_id`, `is_read`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='聊天消息表';
 
 -- 信用分变动记录表（对应 Room credit_records）
