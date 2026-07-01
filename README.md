@@ -128,8 +128,8 @@ buildConfigField("String", "WS_BASE_URL", "\"ws://<your-server-ip>:8080/ws\"")
 
 | 路径 / 单位 | 说明 |
 |---|---|
-| `/opt/campushelp/repo` | `git clone` 自本仓库，部署时 `git pull` 拉最新 `main` |
-| `/opt/campushelp/deploy.sh` | 部署脚本：pull → 打包 → 换 jar → 重启 |
+| `/opt/campushelp/repo` | `git clone` 自本仓库，部署时 `git fetch` + `checkout -B` 切到指定分支（默认 `main`） |
+| `/opt/campushelp/deploy.sh` | 部署脚本：`[branch]` 参数 → fetch+checkout → 同步落地页 → 打包 → 换 jar → 重启 |
 | `/opt/campushelp/app.jar` | 运行中的 fat jar（`-Dspring.profiles.active=prod`） |
 | `/opt/campushelp/env` | 生产密钥（`MYSQL_PASSWORD` / `JWT_SECRET`），权限 600，不进仓库 |
 | systemd `campushelp` | 开机自启 + 崩溃自动拉起（`Restart=always`），`After=mysql.service redis-server.service` |
@@ -141,16 +141,31 @@ MySQL / Redis 都在本机（`127.0.0.1`），不对公网。安全组放行 `80
 **日常部署（一条命令）**
 
 ```bash
-# 1) 本地先把改动合并到 main 并 push（经你的代理）
+# 1) 本地 push（经你的代理）
 git push origin main
 
-# 2) 服务器拉取 + 打包 + 重启
+# 2) 服务器拉取 + 打包 + 重启（无参 = main）
 ssh -i <your-key.pem> root@47.239.124.167 /opt/campushelp/deploy.sh
 ```
 
-`deploy.sh` 内部依次执行：`cd /opt/campushelp/repo && git pull --ff-only` → `cd server && mvn -q clean package -DskipTests` → 备份旧 jar 为 `app.jar.bak.<时间戳>` → `cp target/campushelp-server-1.0.0.jar /opt/campushelp/app.jar` → `systemctl restart campushelp` → 打印 `systemctl is-active` 与最近日志。
+**云端测未合并的 server 分支**（不必先合 `main`）
 
-> 脚本用 `--ff-only` 只拉 `main`，改动须先合并到 `main`（与 PR 合 `main` 的流程一致）。覆盖 `app.jar` 时旧进程仍跑旧 jar（已加载进内存），`restart` 后才切到新的，无中间态。
+```bash
+# 1) 本地 push 功能分支（不合 main）
+git push origin <feature-branch>
+
+# 2) 服务器部署该分支
+ssh -i <your-key.pem> root@47.239.124.167 /opt/campushelp/deploy.sh <feature-branch>
+
+# 3) 验完切回生产 main
+ssh -i <your-key.pem> root@47.239.124.167 /opt/campushelp/deploy.sh
+```
+
+> 测分支期间 prod URL 临时跑该分支代码（同一实例/端口）；若该分支 `site/index.html` 与 `main` 不同会一并覆盖落地页，切回 `main` 即恢复。回滚靠 `app.jar.bak.<时间戳>`（见下）。
+
+`deploy.sh` 内部依次执行：`BRANCH="${1:-main}"` → `cd /opt/campushelp/repo && git fetch origin && git checkout -B "$BRANCH" "origin/$BRANCH"` → 同步 `site/index.html`（存在则 cp）→ `cd server && mvn -q clean package -DskipTests` → 备份旧 jar 为 `app.jar.bak.<时间戳>` → `cp target/campushelp-server-1.0.0.jar /opt/campushelp/app.jar` → `systemctl restart campushelp` → 打印 `systemctl is-active` 与最近日志。
+
+> 脚本默认拉 `main`（无参），传分支名则 `fetch` + `checkout -B` 切到该分支并强制对齐远程——所以**云端测 server WIP 不必先合 `main`**，push 功能分支后 `deploy.sh <branch>` 即可上云，验完无参切回。覆盖 `app.jar` 时旧进程仍跑旧 jar（已加载进内存），`restart` 后才切到新的，无中间态。
 
 **常用运维命令（服务器上）**
 
@@ -315,7 +330,6 @@ task ──1:1──▶ order          (task_id)
 ```
 
 ## 团队分工
-
 
 > **v2（重构后）** · 登录已闭环，4 人可并行。
 > 原分工假设「A 先做完登录态才能解锁 B/C/D」——重构后该假设失效。
