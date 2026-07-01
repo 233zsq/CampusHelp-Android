@@ -36,6 +36,9 @@ public class CampusHelpApp extends Application {
             OkHttpProvider.setToken(token);
         }
         UserManager.init(this); // 身份/用户信息统一入口（B/C/D 用）
-        MockDataSeeder.seedIfEmpty(this); // 无后端时填充演示数据
+        // 演示数据仅 debug 注入，release 包保持数据库干净（网络为唯一真源）
+        if (BuildConfig.DEBUG) {
+            MockDataSeeder.seedIfEmpty(this);
+        }
     }
 }
