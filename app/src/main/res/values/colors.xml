@@ -20,4 +20,11 @@
     <color name="divider">#FFE5E7EB</color>
     <color name="text_primary">#FF1F2937</color>
     <color name="text_secondary">#FF6B7280</color>
+
+    <!-- 任务状态标签 -->
+    <color name="status_pending">#FF3B82F6</color>
+    <color name="status_overtime">#FFEF5350</color>
+    <color name="status_accepted">#FF1B9E6E</color>
+    <color name="status_completed">#FF6B7280</color>
+    <color name="status_cancelled">#FF9CA3AF</color>
 </resources>
