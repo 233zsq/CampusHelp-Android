@@ -15,8 +15,20 @@ import com.campus.help.databinding.ItemTaskBinding;
 
 /**
  * 任务列表适配器。根据 status 和 deadline 展示状态标签。
+ * 点击回调通过 setOnItemClickListener 设置，在 bind 内部绑到 root view。
  */
 public class TaskAdapter extends BaseAdapter<Task, ItemTaskBinding> {
+
+    /** 任务卡片点击回调 */
+    public interface OnItemClickListener {
+        void onItemClick(Task task);
+    }
+
+    private OnItemClickListener clickListener;
+
+    public void setOnItemClickListener(OnItemClickListener listener) {
+        this.clickListener = listener;
+    }
 
     private static final String[] TYPE_LABEL = {"跑腿", "拼单", "二手"};
 
@@ -42,6 +54,13 @@ public class TaskAdapter extends BaseAdapter<Task, ItemTaskBinding> {
 
         // 状态标签
         setStatusBadge(b, task);
+
+        // 卡片点击 → 详情页
+        b.getRoot().setOnClickListener(v -> {
+            if (clickListener != null) {
+                clickListener.onItemClick(task);
+            }
+        });
     }
 
     private void setStatusBadge(@NonNull ItemTaskBinding b, @NonNull Task task) {
