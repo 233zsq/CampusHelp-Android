@@ -120,6 +120,101 @@ buildConfigField("String", "API_BASE_URL", "\"http://<your-server-ip>:8080/\"")
 buildConfigField("String", "WS_BASE_URL", "\"ws://<your-server-ip>:8080/ws\"")
 ```
 
+### 5. 部署后端到服务器（生产）
+
+生产后端跑在阿里云**香港** ECS `47.239.124.167`（域名 `zsq-233.xin`，香港机器免 ICP 备案），对外入口是 **`https://zsq-233.xin`**（nginx 反代 443 → 本机 8080，Let's Encrypt 证书）。后端由 systemd 托管，**源码直接从本仓库 GitHub 拉取**——公开库，服务器匿名可 clone，无需手动 scp。本机连不上 GitHub 也没关系，服务器自己 pull，本机只负责 push。
+
+**服务器布局**
+
+| 路径 / 单位 | 说明 |
+|---|---|
+| `/opt/campushelp/repo` | `git clone` 自本仓库，部署时 `git pull` 拉最新 `main` |
+| `/opt/campushelp/deploy.sh` | 部署脚本：pull → 打包 → 换 jar → 重启 |
+| `/opt/campushelp/app.jar` | 运行中的 fat jar（`-Dspring.profiles.active=prod`） |
+| `/opt/campushelp/env` | 生产密钥（`MYSQL_PASSWORD` / `JWT_SECRET`），权限 600，不进仓库 |
+| systemd `campushelp` | 开机自启 + 崩溃自动拉起（`Restart=always`），`After=mysql.service redis-server.service` |
+| nginx（80/443） | 反代 → `127.0.0.1:8080`，`http` 301→`https`；`/ws` 带 WebSocket upgrade 头；配置 `/etc/nginx/sites-available/zsq-233.xin` |
+| Let's Encrypt | 证书在 `/etc/letsencrypt/live/zsq-233.xin/`，certbot 申请 + systemd timer 自动续期 |
+
+MySQL / Redis 都在本机（`127.0.0.1`），不对公网。安全组放行 `80` / `443`（nginx 对外入口）和 `8080`（后端直连，可关）；`3306` / `6379` 不对公网。
+
+**日常部署（一条命令）**
+
+```bash
+# 1) 本地先把改动合并到 main 并 push（经你的代理）
+git push origin main
+
+# 2) 服务器拉取 + 打包 + 重启
+ssh -i <your-key.pem> root@47.239.124.167 /opt/campushelp/deploy.sh
+```
+
+`deploy.sh` 内部依次执行：`cd /opt/campushelp/repo && git pull --ff-only` → `cd server && mvn -q clean package -DskipTests` → 备份旧 jar 为 `app.jar.bak.<时间戳>` → `cp target/campushelp-server-1.0.0.jar /opt/campushelp/app.jar` → `systemctl restart campushelp` → 打印 `systemctl is-active` 与最近日志。
+
+> 脚本用 `--ff-only` 只拉 `main`，改动须先合并到 `main`（与 PR 合 `main` 的流程一致）。覆盖 `app.jar` 时旧进程仍跑旧 jar（已加载进内存），`restart` 后才切到新的，无中间态。
+
+**常用运维命令（服务器上）**
+
+```bash
+systemctl status campushelp        # 状态 + 最近日志
+systemctl restart campushelp       # 手动重启
+journalctl -u campushelp -f        # 实时日志
+journalctl -u campushelp -n 50     # 最近 50 行
+```
+
+**回滚**：每次部署都留 `app.jar.bak.<时间戳>`，恢复最近一个备份即可：
+
+```bash
+cp /opt/campushelp/app.jar.bak.<时间戳> /opt/campushelp/app.jar
+systemctl restart campushelp
+```
+
+**域名 + HTTPS（nginx + Let's Encrypt，一次性配置）**
+
+域名 `zsq-233.xin` A 记录指向 ECS `47.239.124.167`（阿里云**香港**机器，免 ICP 备案）。对外入口为 `https://zsq-233.xin`，nginx 反代 443 → 本机 8080，`http` 自动 301 跳 `https`。首次配置（服务器上）：
+
+```bash
+# 1) 装 nginx + certbot
+apt update && apt install -y nginx certbot python3-certbot-nginx
+
+# 2) 写反代配置（80 → 8080，/ws 带 WebSocket upgrade 头）
+cat > /etc/nginx/sites-available/zsq-233.xin <<'EOF'
+server {
+    listen 80;
+    server_name zsq-233.xin;
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    location /ws {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_read_timeout 86400s;
+    }
+}
+EOF
+ln -sf /etc/nginx/sites-available/zsq-233.xin /etc/nginx/sites-enabled/
+rm -f /etc/nginx/sites-enabled/default
+nginx -t && systemctl reload nginx
+
+# 3) 申请证书 + 自动配 443 + HTTP→HTTPS 跳转（需安全组已放行 80/443）
+certbot --nginx -d zsq-233.xin --non-interactive --agree-tos --register-unsafely-without-email --redirect
+```
+
+证书在 `/etc/letsencrypt/live/zsq-233.xin/`，certbot 的 systemd timer 自动续期（证书 90 天到期，无需手动）。`/ws` 的 upgrade 头已配好，等后端 WebSocket 端点实现后 `wss://` 直接通。
+
+配好后 App 的地址（`app/build.gradle.kts`）：
+
+```kotlin
+buildConfigField("String", "API_BASE_URL", "\"https://zsq-233.xin/\"")
+buildConfigField("String", "WS_BASE_URL", "\"wss://zsq-233.xin/ws\"")
+```
+
 ## 数据库表
 
 > 所有时间字段统一为 `BIGINT` 毫秒时间戳；所有表均含 `deleted` 逻辑删除标记。
