@@ -57,6 +57,11 @@
             </intent-filter>
         </activity>
 
+        <!-- 任务详情 -->
+        <activity
+            android:name=".ui.TaskDetailActivity"
+            android:exported="false" />
+
         <!-- 登录/注册（成员 A 填充） -->
         <activity
             android:name=".ui.login.LoginActivity"

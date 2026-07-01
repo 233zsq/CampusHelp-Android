@@ -35,6 +35,19 @@
         <item name="android:clickable">true</item>
     </style>
 
+    <!-- 首页：筛选标签 -->
+    <style name="FilterChip">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">32dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:minWidth">48dp</item>
+        <item name="android:paddingHorizontal">10dp</item>
+        <item name="android:background">@drawable/bg_publish_type_chip</item>
+        <item name="android:textColor">@color/selector_publish_type_text</item>
+        <item name="android:textSize">@dimen/text_caption</item>
+        <item name="android:clickable">true</item>
+    </style>
+
     <!-- 发布页：文本输入框 -->
     <style name="PublishTextInput" parent="Widget.Material3.TextInputLayout.OutlinedBox">
         <item name="android:layout_width">match_parent</item>

@@ -3,11 +3,13 @@ package com.campus.help.data.model;
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 
+import java.io.Serializable;
+
 /**
  * 任务实体（成员 B）。type: 0 跑腿 1 拼单 2 二手；status: 0 待接单 1 已接单 2 已完成 3 已取消。
  */
 @Entity(tableName = "tasks")
-public class Task {
+public class Task implements Serializable {
 
     @PrimaryKey(autoGenerate = true)
     public long id;
