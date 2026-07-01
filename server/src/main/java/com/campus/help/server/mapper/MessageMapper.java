@@ -31,8 +31,8 @@ public interface MessageMapper extends BaseMapper<ChatMessage> {
 
     /**
      * 当前用户作为接收者且未读的消息总数（用于底部 tab 角标）。
-     * 列名 read 是保留字，需 backtick。
+     * 列名 is_read（原 read 是 MySQL 保留字，已迁移）。
      */
-    @Select("SELECT COUNT(*) FROM chat_message WHERE receiver_id = #{userId} AND `read` = 0 AND deleted = 0")
+    @Select("SELECT COUNT(*) FROM chat_message WHERE receiver_id = #{userId} AND is_read = 0 AND deleted = 0")
     long selectUnreadCount(@Param("userId") Long userId);
 }

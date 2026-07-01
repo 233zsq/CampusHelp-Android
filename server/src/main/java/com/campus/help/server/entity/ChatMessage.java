@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 /**
@@ -36,9 +37,15 @@ public class ChatMessage {
     /** 发送时间戳 (ms) */
     private Long timestamp;
 
-    /** 是否已读。列名 is_read（避开 MySQL 保留字 `read`，否则 INSERT 报语法错） */
+    /**
+     * 是否已读。
+     * 字段名 readStatus、列名 is_read：避开 MySQL 保留字 read。
+     * （若字段名仍叫 read，MyBatis-Plus 会生成 "is_read AS read"，别名 read 仍是保留字 → 语法错。）
+     * @JsonProperty("read") 保持对客户端 JSON 字段名 read 不变。
+     */
     @TableField("is_read")
-    private Boolean read;
+    @JsonProperty("read")
+    private Boolean readStatus;
 
     @TableLogic
     private Integer deleted;
