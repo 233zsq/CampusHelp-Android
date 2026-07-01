@@ -70,6 +70,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public void logout(Long userId) {
+        // 清除 Redis token，拦截器下次校验即判失效（踢人）
+        redisTemplate.delete(REDIS_TOKEN_PREFIX + userId);
+        log.info("用户登出: id={}", userId);
+    }
+
+    @Override
     public User getById(Long id) {
         return userMapper.selectById(id);
     }

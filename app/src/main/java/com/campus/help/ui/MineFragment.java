@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Environment;
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
@@ -18,8 +19,8 @@ import com.bumptech.glide.Glide;
 import com.campus.help.core.base.BaseFragment;
 import com.campus.help.core.base.Callback;
 import com.campus.help.core.utils.PermissionUtils;
+import com.campus.help.core.utils.UserManager;
 import com.campus.help.data.model.User;
-import com.campus.help.data.repo.UserManager;
 import com.campus.help.databinding.FragmentMineBinding;
 import com.campus.help.ui.login.LoginActivity;
 
@@ -27,7 +28,7 @@ import java.io.File;
 
 /**
  * 我的 / 个人中心（成员 D）。
- * 头像 / 昵称 / 学号 / 信用分全部走网络（GET /api/users/{id}）；
+ * 头像 / 昵称 / 学号 / 信用分全部走网络：{@link UserManager#getUserInfo()} 取当前用户（成员 A 单一真源）；
  * 头像支持相册 / 拍照上传（POST /api/upload → PUT /api/users/{id} 回写）；
  * 信用明细入口；退出登录走后端 logout + 清本地 + 停 WebSocketService。
  */
@@ -69,6 +70,8 @@ public class MineFragment extends BaseFragment<FragmentMineBinding> {
     @Override
     protected void initView() {
         userManager = UserManager.get();
+        // 信用分加载完成前先隐藏仪表盘，避免闪现 0 分
+        binding.creditGauge.setVisibility(View.INVISIBLE);
 
         // 头像点击 → 选择相册 / 拍照
         binding.avatar.setOnClickListener(v -> showAvatarPicker());
@@ -97,21 +100,18 @@ public class MineFragment extends BaseFragment<FragmentMineBinding> {
 
     @Override
     protected void initData() {
-        long uid = userManager.getCurrentUserId(requireContext());
-        if (uid <= 0) {
-            return;
-        }
-        userManager.getUserInfo(uid).observe(getViewLifecycleOwner(), this::bindUser);
+        userManager.refreshUserInfo();
+        userManager.getUserInfo().observe(getViewLifecycleOwner(), this::bindUser);
     }
 
     private void bindUser(@Nullable User user) {
-        if (user == null) {
-            toast("用户信息加载失败");
+        if (binding == null || user == null) {
             return;
         }
         binding.tvName.setText(user.name == null || user.name.isEmpty() ? "未设置" : user.name);
         binding.tvStudentId.setText(user.studentId == null ? "—" : user.studentId);
         binding.creditGauge.setScore(user.creditScore);
+        binding.creditGauge.setVisibility(View.VISIBLE);
         if (user.avatar != null && !user.avatar.isEmpty()) {
             Glide.with(this).load(user.avatar).circleCrop().into(binding.avatar);
         } else {

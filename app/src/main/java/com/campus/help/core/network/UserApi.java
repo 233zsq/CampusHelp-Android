@@ -33,23 +33,23 @@ public interface UserApi {
     Call<ApiResponse<Long>> register(@Body RegisterRequest request);
 
     /**
-     * 登出。后端删除 Redis token 缓存，使旧 token 立即失效。
-     * 成功时 data = null。
-     */
-    @POST("api/auth/logout")
-    Call<ApiResponse<Void>> logout();
-
-    /**
-     * 获取用户信息（含 avatar / name / studentId / creditScore）。
-     * GET /api/users/{id}
+     * 获取用户信息（含 creditScore）。GET /api/users/{id}
+     * 信用分展示的单一真源：后端已把 user.creditScore 与 credit_record 同步并 clamp 0~1000。
      */
     @GET("api/users/{id}")
-    Call<ApiResponse<User>> getUser(@Path("id") long id);
+    Call<ApiResponse<User>> getById(@Path("id") long id);
 
     /**
-     * 更新用户信息（昵称 / 头像 / 手机号）。body 仅含需更新字段，如 {"avatar": url}。
-     * PUT /api/users/{id}
+     * 更新用户资料（昵称 / 头像 / 手机号）。PUT /api/users/{id}
+     * body 只需包含要更新的字段：{ "name": ..., "avatar": ..., "phone": ... }。
+     * creditScore 不在此更新（信用分真源在后端，由 credit_record 驱动）。
      */
     @PUT("api/users/{id}")
     Call<ApiResponse<Void>> updateUser(@Path("id") long id, @Body Map<String, Object> body);
+
+    /**
+     * 登出。后端清除 Redis token 使其立即失效（踢人）。成功时 data = null。
+     */
+    @POST("api/auth/logout")
+    Call<ApiResponse<Void>> logout();
 }

@@ -50,7 +50,7 @@ CampusHelp/
 | 👤 **个人中心** | 🚧 信用分仪表盘（Canvas 自绘 0~1000，分区间着色）+ 退出登录；资料/头像/记录入口待补 |
 | 🔐 **登录注册** | ✅ JWT 令牌认证，学号 + 密码注册/登录，`TokenManager` 持久化 + 登录闸门 |
 | 📍 **地图定位** | 📋 高德地图 SDK（3dmap / location / search 依赖已注释），定位 + 逆地理 + 任务地图模式 |
-| ⭐ **信用系统** | 🚧 后端已就绪（credit_record + user.creditScore 同步并 clamp 0~1000）；前端加减触发与单一真源待对接 |
+| ⭐ **信用系统** | 🚧 后端已就绪（credit_record + user.creditScore 同步并 clamp 0~1000）；单一真源已对接（`UserManager` → `user.creditScore`），前端加减触发待对接 |
 
 > 状态图例：✅ 已完成 · 🚧 部分完成 · 📋 未开始（详见下方 [团队分工](#团队分工)）
 
@@ -109,7 +109,7 @@ mvn spring-boot:run
 3. 如需高德地图功能：在 `AndroidManifest.xml` 中替换 `PLACEHOLDER_AMAP_KEY` 为你在 [lbs.amap.com](https://lbs.amap.com) 申请的 Key
 4. 选择模拟器或真机，点击 Run
 
-> **提示**：登录与任务列表依赖后端（纯网络）；User / Credit / Message 仍可走 Room + Mock 数据兜底，待统一迁移到网络。
+> **提示**：登录 / 任务 / User / Credit 均依赖后端（纯网络）；Message 仍走 Room 兜底（待 C 迁移）。debug 包额外注入 `MockDataSeeder` 演示数据。
 
 ### 4. 配置后端地址
 
@@ -118,6 +118,116 @@ mvn spring-boot:run
 ```kotlin
 buildConfigField("String", "API_BASE_URL", "\"http://<your-server-ip>:8080/\"")
 buildConfigField("String", "WS_BASE_URL", "\"ws://<your-server-ip>:8080/ws\"")
+```
+
+### 5. 部署后端到服务器（生产）
+
+生产后端跑在阿里云**香港** ECS `47.239.124.167`（域名 `zsq-233.xin`，香港机器免 ICP 备案），对外入口是 **`https://zsq-233.xin`**（nginx 反代 443 → 本机 8080，Let's Encrypt 证书）。后端由 systemd 托管，**源码直接从本仓库 GitHub 拉取**——公开库，服务器匿名可 clone，无需手动 scp。本机连不上 GitHub 也没关系，服务器自己 pull，本机只负责 push。
+
+**服务器布局**
+
+| 路径 / 单位 | 说明 |
+|---|---|
+| `/opt/campushelp/repo` | `git clone` 自本仓库，部署时 `git fetch` + `checkout -B` 切到指定分支（默认 `main`） |
+| `/opt/campushelp/deploy.sh` | 部署脚本：`[branch]` 参数 → fetch+checkout → 同步落地页 → 打包 → 换 jar → 重启 |
+| `/opt/campushelp/app.jar` | 运行中的 fat jar（`-Dspring.profiles.active=prod`） |
+| `/opt/campushelp/env` | 生产密钥（`MYSQL_PASSWORD` / `JWT_SECRET`），权限 600，不进仓库 |
+| systemd `campushelp` | 开机自启 + 崩溃自动拉起（`Restart=always`），`After=mysql.service redis-server.service` |
+| nginx（80/443） | 反代 → `127.0.0.1:8080`，`http` 301→`https`；`/ws` 带 WebSocket upgrade 头；配置 `/etc/nginx/sites-available/zsq-233.xin` |
+| Let's Encrypt | 证书在 `/etc/letsencrypt/live/zsq-233.xin/`，certbot 申请 + systemd timer 自动续期 |
+
+MySQL / Redis 都在本机（`127.0.0.1`），不对公网。安全组放行 `80` / `443`（nginx 对外入口）和 `8080`（后端直连，可关）；`3306` / `6379` 不对公网。
+
+**日常部署（一条命令）**
+
+```bash
+# 1) 本地 push（经你的代理）
+git push origin main
+
+# 2) 服务器拉取 + 打包 + 重启（无参 = main）
+ssh -i <your-key.pem> root@47.239.124.167 /opt/campushelp/deploy.sh
+```
+
+**云端测未合并的 server 分支**（不必先合 `main`）
+
+```bash
+# 1) 本地 push 功能分支（不合 main）
+git push origin <feature-branch>
+
+# 2) 服务器部署该分支
+ssh -i <your-key.pem> root@47.239.124.167 /opt/campushelp/deploy.sh <feature-branch>
+
+# 3) 验完切回生产 main
+ssh -i <your-key.pem> root@47.239.124.167 /opt/campushelp/deploy.sh
+```
+
+> 测分支期间 prod URL 临时跑该分支代码（同一实例/端口）；若该分支 `site/index.html` 与 `main` 不同会一并覆盖落地页，切回 `main` 即恢复。回滚靠 `app.jar.bak.<时间戳>`（见下）。
+
+`deploy.sh` 内部依次执行：`BRANCH="${1:-main}"` → `cd /opt/campushelp/repo && git fetch origin && git checkout -B "$BRANCH" "origin/$BRANCH"` → 同步 `site/index.html`（存在则 cp）→ `cd server && mvn -q clean package -DskipTests` → 备份旧 jar 为 `app.jar.bak.<时间戳>` → `cp target/campushelp-server-1.0.0.jar /opt/campushelp/app.jar` → `systemctl restart campushelp` → 打印 `systemctl is-active` 与最近日志。
+
+> 脚本默认拉 `main`（无参），传分支名则 `fetch` + `checkout -B` 切到该分支并强制对齐远程——所以**云端测 server WIP 不必先合 `main`**，push 功能分支后 `deploy.sh <branch>` 即可上云，验完无参切回。覆盖 `app.jar` 时旧进程仍跑旧 jar（已加载进内存），`restart` 后才切到新的，无中间态。
+
+**常用运维命令（服务器上）**
+
+```bash
+systemctl status campushelp        # 状态 + 最近日志
+systemctl restart campushelp       # 手动重启
+journalctl -u campushelp -f        # 实时日志
+journalctl -u campushelp -n 50     # 最近 50 行
+```
+
+**回滚**：每次部署都留 `app.jar.bak.<时间戳>`，恢复最近一个备份即可：
+
+```bash
+cp /opt/campushelp/app.jar.bak.<时间戳> /opt/campushelp/app.jar
+systemctl restart campushelp
+```
+
+**域名 + HTTPS（nginx + Let's Encrypt，一次性配置）**
+
+域名 `zsq-233.xin` A 记录指向 ECS `47.239.124.167`（阿里云**香港**机器，免 ICP 备案）。对外入口为 `https://zsq-233.xin`，nginx 反代 443 → 本机 8080，`http` 自动 301 跳 `https`。首次配置（服务器上）：
+
+```bash
+# 1) 装 nginx + certbot
+apt update && apt install -y nginx certbot python3-certbot-nginx
+
+# 2) 写反代配置（80 → 8080，/ws 带 WebSocket upgrade 头）
+cat > /etc/nginx/sites-available/zsq-233.xin <<'EOF'
+server {
+    listen 80;
+    server_name zsq-233.xin;
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    location /ws {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_read_timeout 86400s;
+    }
+}
+EOF
+ln -sf /etc/nginx/sites-available/zsq-233.xin /etc/nginx/sites-enabled/
+rm -f /etc/nginx/sites-enabled/default
+nginx -t && systemctl reload nginx
+
+# 3) 申请证书 + 自动配 443 + HTTP→HTTPS 跳转（需安全组已放行 80/443）
+certbot --nginx -d zsq-233.xin --non-interactive --agree-tos --register-unsafely-without-email --redirect
+```
+
+证书在 `/etc/letsencrypt/live/zsq-233.xin/`，certbot 的 systemd timer 自动续期（证书 90 天到期，无需手动）。`/ws` 的 upgrade 头已配好，等后端 WebSocket 端点实现后 `wss://` 直接通。
+
+配好后 App 的地址（`app/build.gradle.kts`）：
+
+```kotlin
+buildConfigField("String", "API_BASE_URL", "\"https://zsq-233.xin/\"")
+buildConfigField("String", "WS_BASE_URL", "\"wss://zsq-233.xin/ws\"")
 ```
 
 ## 数据库表
@@ -231,7 +341,7 @@ task ──1:1──▶ order          (task_id)
 |:---|:---|:---|
 | 登录态 | A 待做，阻塞全员 | ✅ **已闭环**（JWT 后端 + LoginActivity + TokenManager + 闸门 + 启动恢复） |
 | 任务数据源 | Room | ✅ TaskRepository 已纯网络（TaskApi） |
-| User/Credit/Message 数据源 | Room | ⚠️ 仍 Room，待各自 owner 迁移到网络 |
+| User/Credit/Message 数据源 | Room | User/Credit ✅ 已纯网络（仿 TaskRepository）；Message ⚠️ 仍 Room（C 待迁） |
 | 后端 | 不存在 | ✅ Spring Boot 已部署（`47.239.124.167`），auth/task/order/credit/message REST 就绪；缺 WS / 上传 / 登出 / 便捷接口 |
 | 信用分真源 | 本地双写 | ✅ 后端已同步 `user.creditScore` ↔ `credit_record` sum 并 clamp 0-1000，前端只消费 |
 | IM 方案 | WebSocket / 环信 二选一 | 🎯 定为自研 WS，但后端没 WS → C own 后端端点 |
@@ -247,7 +357,7 @@ task ──1:1──▶ order          (task_id)
 
 | 成员 | 领域 | 当前阶段 | 关键产出 |
 |:---:|:---|:---|:---|
-| 🔐 **A** | 身份与信用 + 数据架构 | 登录已闭环，pivot 到数据迁移 | UserManager · 信用真源 · User/Credit 网络仓库 |
+| 🔐 **A** | 身份与信用 + 数据架构 | 下阶段任务全部完成 | UserManager · 信用真源 · User/Credit 网络仓库 · logout |
 | 📋 **B** | 任务流端到端 | 🔴 握手点：接单通知 + 单主状态管理 | 接单→通知→完成/取消闭环 · OrderApi · "我发布的" |
 | 💬 **C** | 即时通讯端到端（含后端 WS） | WS 空壳，从后端端点开始 | 后端 WS · 真连接 · ChatActivity · 会话列表 |
 | 🗺️ **D** | 地图 + 个人中心端到端（含后端上传） | 信用盘占位，引入高德 | 高德 SDK · 地图模式 · 个人中心 · 头像上传 · 图表 |
@@ -257,25 +367,25 @@ task ──1:1──▶ order          (task_id)
 
 **负责范围**：全局登录态/身份基础设施（维护）、信用分体系端到端、User/Credit 数据源迁移到网络、后端身份/信用便捷接口。
 
-> A 原来的阻塞活（登录）已完成，pivot 到「理顺数据架构」——User/Credit 仓库还停在 Room，跟 TaskRepository 纯网络路线不一致，A own 这两个实体所以由 A 迁。
+> A 原来的阻塞活（登录）已完成，pivot 到「理顺数据架构」——User/Credit 仓库现已迁移到纯网络（与 TaskRepository 路线一致），UserManager 统一入口已就绪。
 
 **当前地基（已完成）**
 - `LoginActivity` 调 `/api/auth/login` + `/register`，JWT 持久化（`TokenManager`）+ `OkHttpProvider.setToken`
 - `MainActivity` 登录闸门 + `CampusHelpApp` 启动恢复 token
 - `UserApi` / `ApiResponse` / `TokenInterceptor` / `RetrofitClient`
 - 后端 `/api/auth/*`、`/api/users/{id}`、`/api/credits`(+`/sum`) 就绪；`CreditServiceImpl` 已同步 creditScore 与 sum 并 clamp 0-1000
-- `UserRepository` / `CreditRepository` 仍本地 Room（待迁移）
+- `UserRepository` / `CreditRepository` 已迁移到纯网络（仿 `TaskRepository`，补 `UserApi.updateUser` / `CreditApi.sum`）
 
 **下阶段任务（建议顺序）**
-1. **统一信用分真源（最高优先，B/D 显示都依赖）** — 展示信用分统一调 `GET /api/users/{id}`（取 `creditScore`）；明细调 `GET /api/credits?userId=`；删掉前端对本地 `User.creditScore` 的双写。
-2. **UserRepository / CreditRepository 迁移到网络** — 仿 `TaskRepository` 纯网络写法，补全 `UserApi`（getUser / updateUser）、`CreditApi`（list / sum / add）。
-3. **UserManager 封装** — 封 `TokenManager` + `UserApi`：`getCurrentUserId()`、`getUserInfo()`、`refreshUserInfo()`，给 B/C/D 统一入口。
-4. **后端补身份便捷接口** — `POST /api/auth/logout`（清 Redis token，踢人机制已就绪只差接口）；（可后置）refresh token。
-5. **清理** — `MockDataSeeder` 限 debug build。
+1. ✅ **统一信用分真源（最高优先，B/D 显示都依赖）**（已完成）— 展示信用分统一调 `GET /api/users/{id}`（取 `creditScore`）；明细调 `GET /api/credits?userId=`；删掉前端对本地 `User.creditScore` 的双写。
+2. ✅ **UserRepository / CreditRepository 迁移到网络**（已完成）— 仿 `TaskRepository` 纯网络写法，补全 `UserApi`（getUser / updateUser）、`CreditApi`（list / sum / add）。
+3. ✅ **UserManager 封装**（已完成）— 封 `TokenManager` + `UserApi`：`getCurrentUserId()`、`getUserInfo()`、`refreshUserInfo()`，给 B/C/D 统一入口。
+4. ✅ **后端补身份便捷接口**（已完成）— `POST /api/auth/logout`（清 Redis token，踢人机制已就绪只差接口）；（可后置）refresh token。
+5. ✅ **清理**（已完成）— `MockDataSeeder` 限 debug build。
 
 **产出物**：`UserManager.getCurrentUserId()/getUserInfo()` · 信用分单一真源 + 加减明细（端到端）· User/Credit 网络仓库
 
-**依赖/阻塞**：A **不再阻塞** B/C/D；但 `UserManager.getUserInfo()` 被 B（任务详情显示发布者）和 D（个人中心）消费，尽早出接口。
+**依赖/阻塞**：A **不再阻塞** B/C/D；`UserManager.getUserInfo()` 已就绪，D（个人中心 `MineFragment`）已对接，B（任务详情显示发布者）待对接。
 
 </details>
 

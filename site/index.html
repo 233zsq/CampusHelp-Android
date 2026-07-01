@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CampusHelp · 校园互助平台</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; color: #1f2937; background: #f8fafc; line-height: 1.6; }
+  .hero { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: #fff; padding: 84px 20px 68px; text-align: center; }
+  .hero h1 { font-size: 2.8rem; font-weight: 800; letter-spacing: -1px; }
+  .hero .tag { margin-top: 12px; font-size: 1.15rem; opacity: .92; }
+  .hero .badge { margin-top: 18px; display: inline-block; padding: 5px 14px; background: rgba(255,255,255,.18); border-radius: 999px; font-size: .85rem; }
+  .container { max-width: 760px; margin: -40px auto 0; padding: 0 20px; }
+  .card { background: #fff; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.08); padding: 36px 32px; }
+  .desc { font-size: 1.05rem; color: #374151; }
+  .features { margin-top: 28px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .feat { padding: 16px; border: 1px solid #eef0f4; border-radius: 12px; }
+  .feat .ico { font-size: 1.5rem; }
+  .feat h3 { font-size: 1rem; margin: 6px 0 4px; }
+  .feat p { font-size: .88rem; color: #6b7280; }
+  .actions { margin-top: 32px; text-align: center; }
+  .btn { display: inline-block; padding: 12px 30px; background: #4f46e5; color: #fff; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 1rem; transition: transform .15s, background .15s; }
+  .btn:hover { background: #4338ca; transform: translateY(-1px); }
+  .tech { margin-top: 24px; text-align: center; font-size: .85rem; color: #9ca3af; }
+  footer { margin-top: 40px; text-align: center; padding: 24px; color: #9ca3af; font-size: .85rem; }
+  @media (max-width: 560px) { .features { grid-template-columns: 1fr; } .hero h1 { font-size: 2.1rem; } .card { padding: 26px 20px; } }
+</style>
+</head>
+<body>
+  <section class="hero">
+    <h1>CampusHelp</h1>
+    <div class="tag">校园互助平台 · 同学之间的跑腿、拼单、二手交易</div>
+    <div class="badge">Android + Spring Boot</div>
+  </section>
+  <div class="container">
+    <div class="card">
+      <p class="desc">CampusHelp 是一个面向校园的互助平台，方便同学之间发布和接取跑腿、拼单、二手交易等任务。集成即时通讯、信用分系统与地图定位，让互助更高效、更可信。</p>
+      <div class="features">
+        <div class="feat"><div class="ico">📝</div><h3>任务发布与接单</h3><p>跑腿 / 拼单 / 二手，状态流转与接单管理。</p></div>
+        <div class="feat"><div class="ico">💬</div><h3>即时通讯</h3><p>自研 WebSocket，接单前后实时沟通。</p></div>
+        <div class="feat"><div class="ico">⭐</div><h3>信用分体系</h3><p>完成加分、超时扣分，0~1000 可视化。</p></div>
+        <div class="feat"><div class="ico">📍</div><h3>地图定位</h3><p>高德地图看附近任务，定位 + 逆地理。</p></div>
+      </div>
+      <div class="actions">
+        <a class="btn" href="https://github.com/233zsq/CampusHelp-Android" target="_blank" rel="noopener">→ 查看 GitHub 源码</a>
+      </div>
+      <div class="tech">技术栈：Java · MVVM · Retrofit · Spring Boot 3 · MyBatis-Plus · MySQL · Redis · JWT</div>
+    </div>
+  </div>
+  <footer>© CampusHelp · 校园互助平台项目</footer>
+</body>
+</html>
