@@ -49,11 +49,22 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
-    public void markRead(String conversationId) {
+    public void markRead(String conversationId, Long receiverId) {
         messageMapper.update(null,
                 new LambdaUpdateWrapper<ChatMessage>()
                         .eq(ChatMessage::getConversationId, conversationId)
+                        .eq(ChatMessage::getReceiverId, receiverId)
                         .set(ChatMessage::getRead, true)
         );
+    }
+
+    @Override
+    public List<ChatMessage> listConversations(Long userId) {
+        return messageMapper.selectLatestPerConversation(userId);
+    }
+
+    @Override
+    public long unreadCount(Long userId) {
+        return messageMapper.selectUnreadCount(userId);
     }
 }

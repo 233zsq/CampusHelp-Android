@@ -19,6 +19,8 @@ public abstract class BaseAdapter<T, VB extends ViewBinding>
 
     protected final List<T> items = new ArrayList<>();
 
+    private OnItemClickListener<T> clickListener;
+
     public void submit(List<T> list) {
         items.clear();
         if (list != null) {
@@ -36,6 +38,10 @@ public abstract class BaseAdapter<T, VB extends ViewBinding>
         return items;
     }
 
+    public void setOnItemClickListener(OnItemClickListener<T> listener) {
+        this.clickListener = listener;
+    }
+
     @NonNull
     @Override
     public BaseHolder<VB> onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -46,6 +52,12 @@ public abstract class BaseAdapter<T, VB extends ViewBinding>
     @Override
     public void onBindViewHolder(@NonNull BaseHolder<VB> holder, int position) {
         bind(holder.binding, items.get(position), position);
+        holder.itemView.setOnClickListener(v -> {
+            int pos = holder.getBindingAdapterPosition();
+            if (clickListener != null && pos != RecyclerView.NO_POSITION) {
+                clickListener.onItemClick(items.get(pos), pos);
+            }
+        });
     }
 
     @Override
@@ -64,5 +76,10 @@ public abstract class BaseAdapter<T, VB extends ViewBinding>
             super(binding.getRoot());
             this.binding = binding;
         }
+    }
+
+    /** 列表项点击监听器。 */
+    public interface OnItemClickListener<T> {
+        void onItemClick(@NonNull T item, int position);
     }
 }

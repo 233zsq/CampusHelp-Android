@@ -33,6 +33,8 @@ public class CampusHelpApp extends Application {
         String token = TokenManager.getToken(this);
         if (token != null) {
             OkHttpProvider.setToken(token);
+            // 恢复登录态后重启 IM 长连接
+            com.campus.help.feature.im.WebSocketService.start(this);
         }
         MockDataSeeder.seedIfEmpty(this); // 无后端时填充演示数据
     }

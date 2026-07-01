@@ -73,7 +73,8 @@ CREATE TABLE IF NOT EXISTS `chat_message` (
     `deleted`         TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
     PRIMARY KEY (`id`),
     KEY `idx_conversation_id` (`conversation_id`),
-    KEY `idx_receiver_id` (`receiver_id`)
+    KEY `idx_receiver_id` (`receiver_id`),
+    KEY `idx_receiver_read` (`receiver_id`, `read`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='聊天消息表';
 
 -- 信用分变动记录表（对应 Room credit_records）

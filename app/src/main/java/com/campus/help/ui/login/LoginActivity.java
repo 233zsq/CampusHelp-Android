@@ -14,6 +14,7 @@ import com.campus.help.core.network.dto.LoginResponse;
 import com.campus.help.core.network.dto.RegisterRequest;
 import com.campus.help.core.utils.TokenManager;
 import com.campus.help.databinding.ActivityLoginBinding;
+import com.campus.help.feature.im.WebSocketService;
 import com.campus.help.ui.MainActivity;
 
 import retrofit2.Call;
@@ -55,6 +56,7 @@ public class LoginActivity extends BaseActivity<ActivityLoginBinding> {
                     LoginResponse data = resp.body().getData();
                     TokenManager.save(LoginActivity.this, data.token, data.userId, data.name);
                     OkHttpProvider.setToken(data.token);
+                    WebSocketService.start(LoginActivity.this);
                     startActivity(new Intent(LoginActivity.this, MainActivity.class));
                     finish();
                 } else {
