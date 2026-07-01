@@ -248,7 +248,7 @@ task ──1:1──▶ order          (task_id)
 | 成员 | 领域 | 当前阶段 | 关键产出 |
 |:---:|:---|:---|:---|
 | 🔐 **A** | 身份与信用 + 数据架构 | 登录已闭环，pivot 到数据迁移 | UserManager · 信用真源 · User/Credit 网络仓库 |
-| 📋 **B** | 任务流端到端 | 列表已绑网络，补体验+详情+接单 | 发布/接单/完成 · TaskDetailActivity · OrderApi |
+| 📋 **B** | 任务流端到端 | 🔴 握手点：接单通知 + 单主状态管理 | 接单→通知→完成/取消闭环 · OrderApi · "我发布的" |
 | 💬 **C** | 即时通讯端到端（含后端 WS） | WS 空壳，从后端端点开始 | 后端 WS · 真连接 · ChatActivity · 会话列表 |
 | 🗺️ **D** | 地图 + 个人中心端到端（含后端上传） | 信用盘占位，引入高德 | 高德 SDK · 地图模式 · 个人中心 · 头像上传 · 图表 |
 
@@ -284,26 +284,34 @@ task ──1:1──▶ order          (task_id)
 
 **负责范围**：任务 CRUD、列表筛选排序、发布表单、任务详情、接单/完成/取消状态流转、Order 域端到端、后端 task/order 便捷接口。
 
-> TaskRepository 已纯网络、HomeFragment 已能绑网络列表。重心从「搭列表」转到「补体验 + 详情/接单流程」。前端没有 OrderApi，B 要建。
+> 🔴 **已到达握手点** — 发布与接单基础链路已打通，需要 C（消息通知）和 D（个人中心）配合完成跨模块联动。
 
 **当前地基（已完成）**
 - `Task` / `Order` 实体、`TaskDao` / `OrderDao`、`TaskRepository`（纯网络）
 - `TaskApi`（GET 分页 / `?type=` / `?status=` / POST / PUT status）
 - `HomeFragment` 已绑 `TaskRepository.observeAll()` + `TaskAdapter`（含状态标签：待接单/已接单/已完成/已取消/超时）
 - `PublishFragment` 发布表单（类型/标题/要求/报酬/地址/截止时间，预览 + 提交后端）
+- `TaskDetailActivity` 任务详情页（全部字段展示 + 接单按钮智能状态）
 - 后端 `/api/tasks`、`/api/orders` 全就绪
-- 缺：`OrderApi`、`TaskDetailActivity`、筛选 UI、DiffUtil
+- 缺：`OrderApi`、筛选 UI、DiffUtil
 
-**下阶段任务（建议顺序）**
-1. **修 MainActivity Tab 切换** — 现在 `FragmentTransaction` 可能每次 new Fragment 丢滚动/输入状态；改 `show/hide` 或 ViewPager2 + BottomNavigationView。
-2. **列表体验升级** — `BaseAdapter.notifyDataSetChanged` → `ListAdapter` + `DiffUtil`；顶部筛选 Tab（全部/跑腿/拼单/二手 → `GET /api/tasks?type=`）+ 排序；loading / empty / SwipeRefreshLayout 下拉刷新。
-3. ✅ **发布任务页** — `PublishFragment` 表单（类型/标题/要求/报酬/地址/截止） + 预览 + `POST /api/tasks` 已实现。
-4. **OrderApi + 接单流程** — 建 `OrderApi`（POST / GET `?takerId=` / PUT `/{id}/complete`）；新建 `TaskDetailActivity`（详情 + 发布者信息调 A 的 `UserManager.getUserInfo()` + 信用分）；接单 `POST /api/orders` + `PUT /api/tasks/{id}/status=1`；完成/取消触发信用分加减（调 A 的 `POST /api/credits`）。
-5. **后端补 task/order 便捷接口** — 我的发布 `GET /api/tasks?publisherId=`（现不支持，B 加参数）；报酬排序参数。
+**握手点 — 需跨模块联动**
 
-**产出物**：可发布/接单/完成/取消 · 首页筛选排序 + 刷新 + 空状态 · `TaskDetailActivity` · `OrderApi`
+| # | 需求 | 涉及模块 | 说明 |
+|:--|:-----|:---------|:-----|
+| 1 | **接单时通知发布者** | B + C | 接单人点击接单 → `POST /api/orders` 创建订单 → 后端自动发一条 `chat_message`（type=2 订单卡片）给任务发布者，内容包含接单人信息 + 任务摘要；前端 C 的 MessageFragment 展示未读消息 |
+| 2 | **单主查看"我发布的"** | B + D | 个人中心新增「我发布的」入口，调 `GET /api/tasks?publisherId={currentUserId}` 展示发布者自己的任务列表，每条显示当前状态（待接单/已接单/已完成/已取消），点击进入详情 |
+| 3 | **单主更新接单状态** | B | 在"我发布的"列表中，已接单的任务提供「确认完成」和「取消订单」操作，调 `PUT /api/tasks/{id}/status` 更新 task 状态 + `PUT /api/orders/{id}/complete` 完结订单，触发信用分变动 |
 
-**依赖**：A 的 `currentUserId`（已就绪）+ `getUserInfo`（尽早对接）；地图 Marker +「附近」筛选依赖 D 的 `LocationHelper`；完成订单触发信用分调 A 的 `POST /api/credits`。
+**下阶段任务**
+1. **OrderApi 对接** — 建 `OrderApi`（POST / GET `?takerId=` / PUT `/{id}/complete`），接单按钮从测试弹窗改为真实 API 调用。
+2. **接单通知（联动 C）** — 接单成功后调消息接口通知发布者；后端 `POST /api/orders` 返回时自动创建通知消息。
+3. **单主任务管理（联动 D）** — "我发布的"列表 + 确认完成 / 取消订单操作。
+4. **列表体验升级** — `ListAdapter` + `DiffUtil` + 筛选 Tab + SwipeRefreshLayout。
+
+**产出物**：接单→通知→完成/取消 全流程闭环 · "我发布的"任务管理 · `OrderApi`
+
+**依赖**：C 的消息通知 + D 的个人中心入口；`UserManager.getUserInfo()`（A）。
 
 </details>
 
@@ -364,5 +372,6 @@ task ──1:1──▶ order          (task_id)
 
 ### ⏱️ 并行节奏
 
-- **第一波（立即并行，互不阻塞）**：A 做信用真源 + UserManager · B 做列表升级 + 发布页 · C 做后端 WS · D 做高德 SDK。
-- **汇合点**：B 的 `TaskDetailActivity` ← A 的 `getUserInfo` · D 的个人中心 ← A+B 的接口 · C 的 WS 握手 ← A 确认 token 传递方式 · D 的地图 Marker ← B 的任务数据。
+- **第一波（已完成）**：✅ A 登录态 · ✅ B 发布+列表+详情 · C 后端 WS 待做 · D 高德 SDK 待做。
+- **🔴 握手点**：B 接单通知（需 C 消息）· B 单主状态管理（需 D 个人中心）· C WS 握手（需 A 确认 token）· D 地图 Marker（需 B 任务数据）。
+- **第二波（握手后）**：B 接单闭环 + 通知 · C 聊天页 + 会话列表 · D 个人中心 + 头像上传 · A UserManager 被各方消费。
