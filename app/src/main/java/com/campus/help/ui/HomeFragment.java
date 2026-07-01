@@ -1,5 +1,6 @@
 package com.campus.help.ui;
 
+import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
 
@@ -30,6 +31,11 @@ public class HomeFragment extends BaseFragment<FragmentHomeBinding> {
     @Override
     protected void initView() {
         adapter = new TaskAdapter();
+        adapter.setOnItemClickListener(task -> {
+            Intent intent = new Intent(getContext(), TaskDetailActivity.class);
+            intent.putExtra("task", task);
+            startActivity(intent);
+        });
         binding.recycler.setLayoutManager(new LinearLayoutManager(getContext()));
         binding.recycler.setAdapter(adapter);
     }
