@@ -58,6 +58,17 @@
                 tools:text="跑腿" />
 
             <TextView
+                android:id="@+id/task_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:paddingHorizontal="6dp"
+                android:paddingVertical="2dp"
+                android:textSize="@dimen/text_caption"
+                tools:text="待接单"
+                tools:textColor="@color/status_pending" />
+
+            <TextView
                 android:id="@+id/task_location"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
