@@ -5,6 +5,7 @@ import com.campus.help.server.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -73,5 +74,16 @@ public class AuthController {
                 "name", user.getName(),
                 "creditScore", user.getCreditScore()
         ));
+    }
+
+    /**
+     * 登出。
+     * POST /api/auth/logout
+     * 清除 Redis 中的 token 使其立即失效（踢人）。需带 Authorization 头。
+     */
+    @PostMapping("/logout")
+    public Result<Void> logout(@RequestAttribute("currentUserId") Long userId) {
+        userService.logout(userId);
+        return Result.ok();
     }
 }

@@ -109,7 +109,7 @@ mvn spring-boot:run
 3. 如需高德地图功能：在 `AndroidManifest.xml` 中替换 `PLACEHOLDER_AMAP_KEY` 为你在 [lbs.amap.com](https://lbs.amap.com) 申请的 Key
 4. 选择模拟器或真机，点击 Run
 
-> **提示**：登录与任务列表依赖后端（纯网络）；User / Credit / Message 仍可走 Room + Mock 数据兜底，待统一迁移到网络。
+> **提示**：登录 / 任务 / User / Credit 均依赖后端（纯网络）；Message 仍走 Room 兜底（待 C 迁移）。debug 包额外注入 `MockDataSeeder` 演示数据。
 
 ### 4. 配置后端地址
 
@@ -247,7 +247,7 @@ task ──1:1──▶ order          (task_id)
 
 | 成员 | 领域 | 当前阶段 | 关键产出 |
 |:---:|:---|:---|:---|
-| 🔐 **A** | 身份与信用 + 数据架构 | User/Credit 已迁网络 + UserManager 就绪 | UserManager · 信用真源 · User/Credit 网络仓库 |
+| 🔐 **A** | 身份与信用 + 数据架构 | 下阶段任务全部完成 | UserManager · 信用真源 · User/Credit 网络仓库 · logout |
 | 📋 **B** | 任务流端到端 | 🔴 握手点：接单通知 + 单主状态管理 | 接单→通知→完成/取消闭环 · OrderApi · "我发布的" |
 | 💬 **C** | 即时通讯端到端（含后端 WS） | WS 空壳，从后端端点开始 | 后端 WS · 真连接 · ChatActivity · 会话列表 |
 | 🗺️ **D** | 地图 + 个人中心端到端（含后端上传） | 信用盘占位，引入高德 | 高德 SDK · 地图模式 · 个人中心 · 头像上传 · 图表 |
@@ -267,11 +267,11 @@ task ──1:1──▶ order          (task_id)
 - `UserRepository` / `CreditRepository` 已迁移到纯网络（仿 `TaskRepository`，补 `UserApi.updateUser` / `CreditApi.sum`）
 
 **下阶段任务（建议顺序）**
-1. **统一信用分真源（最高优先，B/D 显示都依赖）** — 展示信用分统一调 `GET /api/users/{id}`（取 `creditScore`）；明细调 `GET /api/credits?userId=`；删掉前端对本地 `User.creditScore` 的双写。
+1. ✅ **统一信用分真源（最高优先，B/D 显示都依赖）**（已完成）— 展示信用分统一调 `GET /api/users/{id}`（取 `creditScore`）；明细调 `GET /api/credits?userId=`；删掉前端对本地 `User.creditScore` 的双写。
 2. ✅ **UserRepository / CreditRepository 迁移到网络**（已完成）— 仿 `TaskRepository` 纯网络写法，补全 `UserApi`（getUser / updateUser）、`CreditApi`（list / sum / add）。
 3. ✅ **UserManager 封装**（已完成）— 封 `TokenManager` + `UserApi`：`getCurrentUserId()`、`getUserInfo()`、`refreshUserInfo()`，给 B/C/D 统一入口。
-4. **后端补身份便捷接口** — `POST /api/auth/logout`（清 Redis token，踢人机制已就绪只差接口）；（可后置）refresh token。
-5. **清理** — `MockDataSeeder` 限 debug build。
+4. ✅ **后端补身份便捷接口**（已完成）— `POST /api/auth/logout`（清 Redis token，踢人机制已就绪只差接口）；（可后置）refresh token。
+5. ✅ **清理**（已完成）— `MockDataSeeder` 限 debug build。
 
 **产出物**：`UserManager.getCurrentUserId()/getUserInfo()` · 信用分单一真源 + 加减明细（端到端）· User/Credit 网络仓库
 

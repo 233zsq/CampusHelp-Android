@@ -27,6 +27,13 @@ public interface UserService {
     String login(String studentId, String password);
 
     /**
+     * 登出：清除 Redis 中的 token，使其立即失效（支持踢人）。
+     *
+     * @param userId 用户 ID
+     */
+    void logout(Long userId);
+
+    /**
      * 根据 ID 查询用户。
      */
     User getById(Long id);
